@@ -21,6 +21,7 @@ export function MainLayout() {
           <NavLink to="/uncontrolinput" style={getNavStyle}>Uncontrolinput</NavLink>
           <NavLink to="/controlledInput" style={getNavStyle}>ControlledInput</NavLink>
           <NavLink to="/formulario" style={getNavStyle}> Formulario </NavLink>
+          <NavLink to="/dolibarr/productos" style={getNavStyle}>Productos Dolibarr</NavLink>
 
         </nav>  
       </header>

@@ -1,5 +1,5 @@
 import React,  {useState, useEffect, useCallback} from 'react';
-import { getRecursos } from '../services/recursosService';
+import { RecursosService } from '../services/recursosService';
 
 export const EjemploAxios = () => {
 
@@ -11,7 +11,7 @@ export const EjemploAxios = () => {
 
     try {
       setLoading(true);
-      const result = await getRecursos();
+      const result = await RecursosService.getRecursos();
       setData(result);
       setError(null);
     } catch (err) {
@@ -43,7 +43,7 @@ export const EjemploAxios = () => {
       { !loading && !error && (
           <ul>
             { data.slice(0, 5).map( (item) => (
-                <li id={item.id} >
+                <li key={item.id} >
                   <strong>{item.title}</strong> <br />
                   <p> {item.body} </p>
                   

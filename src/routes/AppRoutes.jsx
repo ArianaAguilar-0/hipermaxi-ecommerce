@@ -8,6 +8,7 @@ import UncontrolInput from '../pages/UncontrolInput';
 import ControlledInput from '../pages/ControlledInput';
 import Inicio from '../pages/Inicio';
 import { FormularioRegistro } from '../pages/FormularioRegistro';
+import ProductosDolibarr from '../pages/ProductosDolibarr';
 
 const Home = () => <h2>Bienvenido a la página de inicio</h2>;
 // const Productos = () => <h2> Catálogo de Productos </h2>;
@@ -27,6 +28,7 @@ const AppRoutes = () => {
         <Route path="/formulario" element={<FormularioRegistro />} />
         <Route path="/producto/:id" element={<ProductDetail />} />
         <Route path="/contacto" element={<Contacto />} />
+        <Route path="/dolibarr/productos" element={<ProductosDolibarr />} />
       </Route>
       <Route path="*" element={<NotFound />} />
     </Routes>
