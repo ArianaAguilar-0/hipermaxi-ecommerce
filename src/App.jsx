@@ -10,6 +10,7 @@ import "@fortawesome/fontawesome-free/css/all.min.css";
 import "slick-carousel/slick/slick.css";
 import "slick-carousel/slick/slick-theme.css";
 import AppRoutes from './routes/AppRoutes';
+import { AuthProvider } from './context/AuthContext';
 
 
 function App() {
@@ -17,7 +18,9 @@ function App() {
   
   return (
 
-     <AppRoutes />
+    <AuthProvider>
+      <AppRoutes />
+    </AuthProvider>
     
   )
 }

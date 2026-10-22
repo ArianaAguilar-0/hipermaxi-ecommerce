@@ -1,7 +1,8 @@
 import React from 'react';
-import {BrowserRouter, Routes, Route} from 'react-router-dom';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import NotFound from '../pages/NotFound';
 import MainLayout from '../layouts/MainLayout';
+import Login from '../componentes/LoginForm';
 import Productos from '../pages/products';
 import ProductDetail from '../pages/ProductDetail';
 import UncontrolInput from '../pages/UncontrolInput';
@@ -20,18 +21,19 @@ const AppRoutes = () => {
   return (
     <BrowserRouter>
       <Routes>
-      <Route element={<MainLayout />} > 
-        <Route index element={<Inicio />} />
-        <Route path="/productos" element={<Productos />} />
-        <Route path="/uncontrolinput" element={<UncontrolInput />} />
-        <Route path="/controlledInput" element={<ControlledInput />} />
-        <Route path="/formulario" element={<FormularioRegistro />} />
-        <Route path="/producto/:id" element={<ProductDetail />} />
-        <Route path="/contacto" element={<Contacto />} />
-        <Route path="/dolibarr/productos" element={<ProductosDolibarr />} />
-      </Route>
-      <Route path="*" element={<NotFound />} />
-    </Routes>
+        <Route path='/login' element={<Login />} />
+        <Route element={<MainLayout />} >
+          <Route index element={<Inicio />} />
+          <Route path="/productos" element={<Productos />} />
+          <Route path="/uncontrolinput" element={<UncontrolInput />} />
+          <Route path="/controlledInput" element={<ControlledInput />} />
+          <Route path="/formulario" element={<FormularioRegistro />} />
+          <Route path="/producto/:id" element={<ProductDetail />} />
+          <Route path="/contacto" element={<Contacto />} />
+          <Route path="/dolibarr/productos" element={<ProductosDolibarr />} />
+        </Route>
+        <Route path="*" element={<NotFound />} />
+      </Routes>
     </BrowserRouter>
   );
 }
