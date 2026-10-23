@@ -167,6 +167,13 @@
   }
 
 @theme inline {
+  /* Colores de marca Hipermaxi (tomados del logo) */
+  --color-hiper-orange: #FF6100;
+  --color-hiper-orange-dark: #E05500;
+  --color-hiper-orange-light: #FFF1E8;
+  --color-hiper-navy: #121F96;
+  --color-hiper-navy-dark: #0C1570;
+  --color-hiper-navy-light: #E8EAF7;
   --font-heading: var(--font-sans);
   --font-sans: 'Geist Variable', sans-serif;
   --color-sidebar-ring: var(--sidebar-ring);
