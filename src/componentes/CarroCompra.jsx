@@ -7,33 +7,8 @@ import {
 } from 'lucide-react';
 
 export default function CarroCompra() {
-    // =========================================================
-    // PRODUCTOS DE EJEMPLO
-    // =========================================================
-
-    const [productos, setProductos] = useState([
-        {
-            id: 1,
-            nombre: 'Leche Pil 1 Litro',
-            precio: 8.50,
-            cantidad: 2,
-            imagen: 'https://placehold.co/100x100?text=Leche',
-        },
-        {
-            id: 2,
-            nombre: 'Arroz 1 Kg',
-            precio: 7.50,
-            cantidad: 1,
-            imagen: 'https://placehold.co/100x100?text=Arroz',
-        },
-        {
-            id: 3,
-            nombre: 'Aceite Vegetal 900 ml',
-            precio: 12.90,
-            cantidad: 1,
-            imagen: 'https://placehold.co/100x100?text=Aceite',
-        },
-    ]);
+    // Productos del carrito: empieza vacío, se conecta a CartContext en la Fase 1
+    const [productos, setProductos] = useState([]);
 
     // =========================================================
     // AUMENTAR CANTIDAD

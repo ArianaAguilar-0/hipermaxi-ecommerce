@@ -1,5 +1,5 @@
 
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useRef, useState } from 'react';
 import { X } from 'lucide-react';
 
 const DrawerContext = createContext(null);
@@ -52,13 +52,19 @@ export function Drawer({
         };
     }, [isOpen]);
 
+    // Referencia a la última versión de setOpen (para usarla dentro del efecto)
+    const setOpenRef = useRef(setOpen);
+    useEffect(() => {
+        setOpenRef.current = setOpen;
+    });
+
     // Cerrar con tecla ESC
     useEffect(() => {
         if (!isOpen) return;
 
         const handleKeyDown = (event) => {
             if (event.key === 'Escape') {
-                setOpen(false);
+                setOpenRef.current(false);
             }
         };
 

@@ -1,46 +1,55 @@
 import axios from 'axios';
 
-// Cliente HTTP centralizado para la API REST de Dolibarr.
-// La autenticación se hace con la cabecera DOLAPIKEY.
-export const DOLIBARR_BASE_URL =
-  import.meta.env.VITE_DOLIBARR_URL || 'https://hipermaxi.with11.dolicloud.com/api/index.php';
+// Cliente HTTP único para la API REST de Dolibarr.
+// Las peticiones van al proxy de Vite (/api), que agrega la key de servicio.
+// La key NUNCA está en el navegador: solo se envía el token del usuario si inició sesión.
 
-const STORAGE_KEY = 'dolibarr_api_key';
+// Clave de sessionStorage donde AuthContext guarda la sesión
+export const SESSION_KEY = 'hiper_sesion';
 
-export const getApiKey = () =>
-  localStorage.getItem(STORAGE_KEY) || import.meta.env.VITE_DOLIBARR_API_KEY || '';
-
-export const setApiKey = (key) => {
-  if (key) localStorage.setItem(STORAGE_KEY, key.trim());
-  else localStorage.removeItem(STORAGE_KEY);
+// Lee el token del usuario logueado (si existe)
+export const getTokenUsuario = () => {
+  try {
+    const sesion = JSON.parse(sessionStorage.getItem(SESSION_KEY) || 'null');
+    return sesion?.token || null;
+  } catch {
+    return null;
+  }
 };
 
 const dolibarrClient = axios.create({
-  baseURL: DOLIBARR_BASE_URL,
-  timeout: 15000,
+  baseURL: '/api/index.php',
+  timeout: 20000,
   headers: {
     'Content-Type': 'application/json',
     Accept: 'application/json',
   },
 });
 
-// Inyecta la API key en cada petición
+// Si hay sesión, se envía el token del usuario; si no, el proxy pone la key de servicio
 dolibarrClient.interceptors.request.use((config) => {
-  const key = getApiKey();
-  if (key) config.headers.DOLAPIKEY = key;
+  const token = getTokenUsuario();
+  if (token) config.headers.DOLAPIKEY = token;
   return config;
 });
 
 // Normaliza los mensajes de error que devuelve Dolibarr
 export const getErrorMessage = (error) => {
   if (axios.isCancel(error)) return 'Petición cancelada';
+  const status = error?.response?.status;
   const data = error?.response?.data;
-  return (
-    data?.error?.message ||
-    data?.message ||
-    error?.message ||
-    'Error desconocido al comunicarse con Dolibarr'
-  );
+  const detalle = data?.error?.message || data?.message;
+
+  if (status === 401) {
+    return `No autorizado (401): la key o el token no son válidos o expiraron.${detalle ? ` ${detalle}` : ''}`;
+  }
+  if (status === 403) {
+    return `Acceso denegado (403): el usuario de Dolibarr no tiene permiso para esta acción.${detalle ? ` ${detalle}` : ''}`;
+  }
+  if (!error?.response) {
+    return 'No se pudo conectar con Dolibarr. Revisa .env.local y reinicia "npm run dev".';
+  }
+  return detalle || error?.message || 'Error desconocido al comunicarse con Dolibarr';
 };
 
 export default dolibarrClient;

@@ -174,27 +174,6 @@ export function Header() {
                 />
 
 
-                {/* Cantidad */}
-
-                <span
-                  className="
-                    absolute
-                    -right-2
-                    -top-2
-                    flex
-                    h-5
-                    w-5
-                    items-center
-                    justify-center
-                    rounded-full
-                    bg-orange-500
-                    text-xs
-                    font-bold
-                    text-white
-                  "
-                >
-                  4
-                </span>
 
 
                 <span className="mt-1 hidden text-xs sm:block">
@@ -250,8 +229,12 @@ export function Header() {
           </NavLink>
 
 
+
+
+
+
           <NavLink
-            to="/productos"
+            to="/admin/productos"
             className={({ isActive }) =>
               `
                 px-6
@@ -266,47 +249,7 @@ export function Header() {
               `
             }
           >
-            Productos
-          </NavLink>
-
-
-          <NavLink
-            to="/contacto"
-            className={({ isActive }) =>
-              `
-                px-6
-                py-3
-                text-sm
-                font-medium
-                transition
-                ${isActive
-                ? 'bg-orange-700 text-white'
-                : 'text-white hover:bg-orange-600'
-              }
-              `
-            }
-          >
-            Contacto
-          </NavLink>
-
-
-          <NavLink
-            to="/dolibarr/productos"
-            className={({ isActive }) =>
-              `
-                px-6
-                py-3
-                text-sm
-                font-medium
-                transition
-                ${isActive
-                ? 'bg-orange-700 text-white'
-                : 'text-white hover:bg-orange-600'
-              }
-              `
-            }
-          >
-            Productos Dolibarr
+            Admin productos
           </NavLink>
 
         </div>

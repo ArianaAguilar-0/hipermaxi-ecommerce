@@ -52,8 +52,6 @@ export const useProductosDolibarr = ({ limit = 10, enabled = true } = {}) => {
   // UPDATE
   const actualizarProducto = (id, form) =>
     ejecutar(() => ProductosDolibarrService.updateProducto(id, form));
-  // DELETE
-  const eliminarProducto = (id) => ejecutar(() => ProductosDolibarrService.deleteProducto(id));
 
   const buscar = (texto) => {
     setPage(0);
@@ -72,7 +70,6 @@ export const useProductosDolibarr = ({ limit = 10, enabled = true } = {}) => {
     recargar,
     crearProducto,
     actualizarProducto,
-    eliminarProducto,
     hasNextPage: !loading && productos.length === limit,
   };
 };

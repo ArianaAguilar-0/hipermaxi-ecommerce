@@ -1,6 +1,5 @@
-import React from 'react';
 
-export const EmptyState = ({ message = "No hay productos disponibles en el catalogo", onAction }) => {
+export const EmptyState = ({ message = "No hay productos disponibles en el catalogo", onAction, actionLabel = "Recargar Catálogo" }) => {
     return (
         <div className="flex flex-col items-center justify-center py-12 px-4 bg-gray-50 border-2 border-dashed border-gray-200 rounded-lg text-center">
             <svg
@@ -20,13 +19,16 @@ export const EmptyState = ({ message = "No hay productos disponibles en el catal
             <h3 className="text-lg font-medium text-gray-900">Registro Vacío</h3>
             <p className="text-sm text-gray-600 mt-1 line-clamp-2">{message}</p>
 
+            {/* El botón solo aparece si hay una acción */}
+            {onAction && (
             <button
                 type="button"
                 onClick={onAction}
                 className="mt-4 px-4 py-2 bg-blue-600 text-white text-sm font-medium rounded-md hover:bg-blue-700 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
             >
-                Recargar Catálogo
+                {actionLabel}
             </button>
+            )}
         </div>
     );
 };

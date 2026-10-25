@@ -1,84 +1,71 @@
-import React, { createContext, useContext, useState } from 'react';
-import axiosClient from '@/api/axiosClient';
+import { createContext, useContext, useState } from 'react';
+import dolibarrClient, { SESSION_KEY, getErrorMessage } from '@/services/dolibarrClient';
 
 const AuthContext = createContext(null);
 
+// Lee la sesión guardada en sessionStorage (se pierde al cerrar la pestaña)
+const leerSesion = () => {
+    try {
+        return JSON.parse(sessionStorage.getItem(SESSION_KEY) || 'null');
+    } catch {
+        return null;
+    }
+};
+
 export const AuthProvider = ({ children }) => {
-    // Se restaura la sesión guardada (si existe) al recargar la página
-    const [user, setUser] = useState(() => {
-        const saved = localStorage.getItem('user_data');
-        return saved ? JSON.parse(saved) : null;
-    });
-    const [token, setToken] = useState(() => localStorage.getItem('jwt-token') || null);
+    const [sesion, setSesion] = useState(leerSesion);
     const [loading, setLoading] = useState(false);
 
     const logout = () => {
-        setUser(null);
-        setToken(null);
-        localStorage.removeItem('jwt-token');
-        localStorage.removeItem('user_data');
-        //enviar al usuario a la pagina de inicio
-        // window.location.href = '/';
-    }
-
-    const login = async (credentials) => {
-        setLoading(true);
+        setSesion(null);
         try {
-
-            const response = await axiosClient.post('/login', credentials);
-            //extrae el token y los datos del usuario
-            // Dolibarr responde: { success: { code, token, entity, message } }
-            const newToken = response.data?.success?.token;
-            if (!newToken) throw new Error('El servidor no devolvió un token');
-            const userData = { login: credentials.login };
-
-            // Guardamos en le local storage
-            localStorage.setItem('jwt-token', newToken);
-            localStorage.setItem('user_data', JSON.stringify(userData));
-
-            // Actualizamos el estado para que la app sepa que hay sesión
-            setToken(newToken);
-            setUser(userData);
-
-            setLoading(false);
-            return { success: true };
-
-
-        } catch (error) {
-            setLoading(false);
-            // Uso de encademnamiento Opcional en caso de fallas de la peticion
-            // Dolibarr devuelve los errores como { error: { code, message } }
-            const message =
-                error.response?.data?.error?.message ||
-                error.response?.data?.message ||
-                error.message ||
-                'Error de conexion o credenciales invalidas';
-            return { success: false, message };
-
+            sessionStorage.removeItem(SESSION_KEY);
+        } catch {
+            // sessionStorage no disponible: no hay nada que limpiar
         }
     };
 
-    // variables contexto
+    // Login con usuario de Dolibarr (los roles se completan en la Fase 3)
+    const login = async (credentials) => {
+        setLoading(true);
+        try {
+            // Dolibarr responde: { success: { code, token, entity, message } }
+            const response = await dolibarrClient.post('/login', credentials);
+            const token = response.data?.success?.token;
+            if (!token) throw new Error('El servidor no devolvió un token');
+
+            const nueva = { token, user: { login: credentials.login } };
+            try {
+                sessionStorage.setItem(SESSION_KEY, JSON.stringify(nueva));
+            } catch {
+                // Si no se puede guardar, la sesión dura solo hasta recargar
+            }
+            setSesion(nueva);
+            return { success: true };
+        } catch (error) {
+            return { success: false, message: getErrorMessage(error) };
+        } finally {
+            setLoading(false);
+        }
+    };
 
     const contextValue = {
-        user,
-        token,
+        user: sesion?.user ?? null,
+        token: sesion?.token ?? null,
         loading,
-        isAutenticated: !!token,
+        isAutenticated: !!sesion?.token,
         login,
-        logout
-
-    }
+        logout,
+    };
 
     return (
         <AuthContext.Provider value={contextValue}>
             {children}
         </AuthContext.Provider>
-    )
-
-
+    );
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => {
     const context = useContext(AuthContext);
     if (!context) {
@@ -86,5 +73,3 @@ export const useAuth = () => {
     }
     return context;
 };
-
-// export  AuthProvider, useAuth;

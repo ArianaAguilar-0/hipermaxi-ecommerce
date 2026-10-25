@@ -113,17 +113,6 @@ export const ProductosDolibarrService = {
     const { data } = await dolibarrClient.put(`/products/${id}`, toDolibarrPayload(form));
     return data;
   },
-
-  deleteProducto: async (id) => {
-    const { data } = await dolibarrClient.delete(`/products/${id}`);
-    return data;
-  },
-
-  /** Obtiene un token (API key) a partir de usuario y contraseña de Dolibarr. */
-  login: async (login, password) => {
-    const { data } = await dolibarrClient.post('/login', { login, password });
-    return data?.success?.token;
-  },
 };
 
 export default ProductosDolibarrService;

@@ -1,26 +1,12 @@
-import React from 'react';
-import ContadorPersistente from '../componentes/ContadorPersistente';
-import TemporizadorOnline from '../componentes/TemporizadorOnline';
-import { EjemploFetch } from '../examples/ejemploFetch';
-import { EjemploAxios } from '../examples/EjemploAxios';
-import CardSkeleton from '../Moleculas/CardSkeleton'
-import DialogDemo from '@/examples/DialogDemo';
-import CatalogProductos from '@/pages/CatalogoProductos';
+import EmptyState from '../shimer/pulse/EmptyState';
+
+// Página de inicio: el catálogo desde Dolibarr se conecta en la Fase 1
 export const Inicio = () => {
-
   return (
-    <>
-      {/* <ContadorPersistente /> */}
-      {/* <TemporizadorOnline /> */}
-      {/* <EjemploFetch /> */}
-      {/* <EjemploAxios /> */}
-      {/* <CardSkeleton /> */}
-      {/* <DialogDemo /> */}
-      <CatalogProductos />
-
-    </>
-
+    <section className="mx-auto max-w-5xl">
+      <EmptyState message="El catálogo se cargará desde Dolibarr en la Fase 1." />
+    </section>
   );
-}
+};
 
 export default Inicio;
