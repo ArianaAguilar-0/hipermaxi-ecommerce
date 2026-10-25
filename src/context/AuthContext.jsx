@@ -54,6 +54,8 @@ export const AuthProvider = ({ children }) => {
         token: sesion?.token ?? null,
         loading,
         isAutenticated: !!sesion?.token,
+        // El rol real se obtiene en la Fase 3 (GET /users/info)
+        esAdmin: sesion?.user?.rol === 'admin',
         login,
         logout,
     };

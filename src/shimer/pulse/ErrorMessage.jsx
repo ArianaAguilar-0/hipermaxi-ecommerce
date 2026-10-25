@@ -1,5 +1,5 @@
 
-export const ErrorMessage = ({ errorDetail, onRetry }) => {
+export const ErrorMessage = ({ errorDetail, onRetry, titulo = 'No se pudo cargar la información' }) => {
     return (
         <div className="bg-red-50 border-l-4 border-red-500 p-4 my-6 rounded-r-md shadow-sm">
             <div className='flex items-start'>
@@ -9,7 +9,7 @@ export const ErrorMessage = ({ errorDetail, onRetry }) => {
                     </svg>
                 </div>
                 <div className='ml-3 flex-1'>
-                    <h3 className='text-base font-medium text-gray-900' >Error al cargar los productos</h3>
+                    <h3 className='text-base font-medium text-gray-900' >{titulo}</h3>
                     <p className='text-sm text-gray-600 mt-1' >
                         {errorDetail || "No se pudo establecer conexion con el servidor"}</p>
                     {onRetry && (

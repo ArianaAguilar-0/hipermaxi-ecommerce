@@ -1,5 +1,6 @@
 import { fileURLToPath } from "node:url";
 import path from "node:path";
+import https from "node:https";
 import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
@@ -41,6 +42,10 @@ export default defineConfig(({ mode }) => {
               target: dolibarrUrl,
               changeOrigin: true,
               secure: true,
+              // Reutiliza conexiones con Dolibarr (menos conexiones nuevas = menos cortes)
+              agent: new https.Agent({ keepAlive: true, maxSockets: 6 }),
+              // Si Dolibarr no responde en 30 s, se corta la petición
+              proxyTimeout: 30000,
               configure: (proxy) => {
                 proxy.on('proxyReq', (proxyReq, req) => {
                   // Si el usuario inició sesión, el navegador ya envía su propio DOLAPIKEY (token).
@@ -48,6 +53,21 @@ export default defineConfig(({ mode }) => {
                   if (!req.headers['dolapikey'] && apiKey) {
                     proxyReq.setHeader('DOLAPIKEY', apiKey);
                   }
+
+                  // Si la conexión con el servidor no se establece en 6 s, se corta
+                  // (algunas conexiones se pierden en la red y tardarían ~21 s en fallar)
+                  const limitarConexion = (socket) => {
+                    if (!socket.connecting) return;
+                    const timer = setTimeout(
+                      () => socket.destroy(new Error('Tiempo de conexión agotado con Dolibarr')),
+                      6000
+                    );
+                    socket.once('connect', () => clearTimeout(timer));
+                    socket.once('close', () => clearTimeout(timer));
+                  };
+                  // El socket puede estar ya asignado o llegar después
+                  if (proxyReq.socket) limitarConexion(proxyReq.socket);
+                  else proxyReq.once('socket', limitarConexion);
                 });
               },
             },

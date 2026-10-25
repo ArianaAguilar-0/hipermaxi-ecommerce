@@ -1,264 +1,138 @@
-
-import { NavLink } from 'react-router-dom';
-
-import {
-  User,
-  ShoppingCart,
-  Search,
-} from 'lucide-react';
-
+import { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { User, ShoppingCart, Menu, X, LogOut, LayoutDashboard, Truck } from 'lucide-react';
 import logo from '../assets/HiperLogo.png';
+import { Drawer, DrawerContent } from '../components/ui/drawer';
+import CarroCompra from '../componentes/carrito/CarroCompra';
+import Buscador from '../componentes/tienda/Buscador';
+import MenuCategorias from '../componentes/tienda/MenuCategorias';
+import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
 
-import {
-  Drawer,
-  DrawerTrigger,
-  DrawerContent,
-} from '../components/ui/drawer';
+// Botón "Mi cuenta": enlace al login o menú con el usuario y cerrar sesión
+const MiCuenta = () => {
+  const { user, isAutenticated, esAdmin, logout } = useAuth();
+  const [abierto, setAbierto] = useState(false);
 
-import CarroCompra from '../componentes/CarroCompra';
-
-
-export function Header() {
+  if (!isAutenticated) {
+    return (
+      <Link to="/login" className="flex flex-col items-center text-gray-700 transition hover:text-hiper-orange">
+        <User size={24} strokeWidth={1.8} />
+        <span className="mt-0.5 hidden text-xs font-medium sm:block">Mi cuenta</span>
+      </Link>
+    );
+  }
 
   return (
-
-    <header className="w-full bg-white shadow-sm">
-
-
-      {/* =====================================================
-          BARRA PRINCIPAL
-      ====================================================== */}
-
-      <div className="container mx-auto flex items-center gap-6 px-4 py-4">
-
-
-        {/* ===================================================
-            LOGO
-        ==================================================== */}
-
-        <div className="flex-shrink-0">
-
-          <NavLink to="/">
-
-            <img
-              src={logo}
-              alt="Hipermaxi"
-              className="h-14 w-auto object-contain"
-            />
-
-          </NavLink>
-
-        </div>
-
-
-        {/* ===================================================
-            BUSCADOR
-        ==================================================== */}
-
-        <div className="flex flex-1 justify-center">
-
-          <div className="relative w-full max-w-2xl">
-
-            <input
-              type="text"
-              placeholder="¿Qué producto estás buscando?"
-              className="
-                w-full
-                rounded-full
-                border
-                border-gray-300
-                bg-gray-50
-                py-3
-                pl-5
-                pr-14
-                text-sm
-                text-gray-700
-                outline-none
-                transition
-                focus:border-orange-500
-                focus:ring-2
-                focus:ring-orange-200
-              "
-            />
-
-            <button
-              type="button"
-              className="
-                absolute
-                right-1
-                top-1/2
-                flex
-                h-10
-                w-10
-                -translate-y-1/2
-                items-center
-                justify-center
-                rounded-full
-                bg-orange-500
-                text-white
-                transition
-                hover:bg-orange-600
-              "
-            >
-
-              <Search size={20} />
-
-            </button>
-
-          </div>
-
-        </div>
-
-
-        {/* ===================================================
-            ICONOS
-        ==================================================== */}
-
-        <div className="flex items-center gap-5">
-
-
-          {/* =================================================
-              USUARIO
-          ================================================== */}
-
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setAbierto((a) => !a)}
+        className="flex flex-col items-center text-hiper-navy transition hover:text-hiper-orange"
+      >
+        <User size={24} strokeWidth={1.8} />
+        <span className="mt-0.5 hidden max-w-24 truncate text-xs font-semibold sm:block">{user?.nombre || user?.login}</span>
+      </button>
+      {abierto && (
+        <div className="absolute right-0 top-full z-50 mt-2 w-48 rounded-xl border bg-white p-1 shadow-lg" onMouseLeave={() => setAbierto(false)}>
+          {esAdmin && (
+            <Link to="/admin/productos" onClick={() => setAbierto(false)} className="flex items-center gap-2 rounded-lg px-3 py-2 text-sm text-gray-700 hover:bg-gray-50">
+              <LayoutDashboard size={16} /> Panel admin
+            </Link>
+          )}
           <button
             type="button"
-            className="
-              flex
-              flex-col
-              items-center
-              text-gray-700
-              transition
-              hover:text-orange-500
-            "
+            onClick={() => { logout(); setAbierto(false); }}
+            className="flex w-full items-center gap-2 rounded-lg px-3 py-2 text-sm text-red-600 hover:bg-red-50"
           >
-
-            <User
-              size={25}
-              strokeWidth={1.8}
-            />
-
-            <span className="mt-1 hidden text-xs sm:block">
-              Mi cuenta
-            </span>
-
+            <LogOut size={16} /> Cerrar sesión
           </button>
-
-
-          {/* =================================================
-              CARRITO
-          ================================================== */}
-
-          <Drawer>
-
-            {/* Botón que abre el Drawer */}
-
-            <DrawerTrigger asChild>
-
-              <button
-                type="button"
-                className="
-                  relative
-                  flex
-                  flex-col
-                  items-center
-                  text-gray-700
-                  transition
-                  hover:text-orange-500
-                "
-              >
-
-                <ShoppingCart
-                  size={25}
-                  strokeWidth={1.8}
-                />
-
-
-
-
-                <span className="mt-1 hidden text-xs sm:block">
-                  Carrito
-                </span>
-
-              </button>
-
-            </DrawerTrigger>
-
-
-            {/* Contenido */}
-
-            <DrawerContent>
-
-              <CarroCompra />
-
-            </DrawerContent>
-
-          </Drawer>
-
         </div>
+      )}
+    </div>
+  );
+};
 
+// Encabezado fijo de la tienda: logo, buscador, cuenta, carrito y categorías
+export function Header() {
+  const { totalItems, abierto, setAbierto } = useCart();
+  const [menuMovil, setMenuMovil] = useState(false);
+
+  return (
+    <header className="sticky top-0 z-40 w-full bg-white shadow-sm">
+      {/* Franja superior */}
+      <div className="hidden bg-hiper-navy-dark text-white/85 sm:block">
+        <div className="mx-auto flex max-w-7xl items-center justify-center gap-2 px-4 py-1.5 text-xs">
+          <Truck size={14} /> Envío a domicilio o recoge en tu sucursal más cercana
+        </div>
       </div>
 
+      {/* Barra principal */}
+      <div className="mx-auto flex max-w-7xl items-center gap-3 px-4 py-3 sm:gap-6">
+        <button
+          type="button"
+          onClick={() => setMenuMovil((m) => !m)}
+          className="rounded-lg p-1.5 text-hiper-navy hover:bg-gray-100 md:hidden"
+          aria-label="Abrir categorías"
+        >
+          {menuMovil ? <X size={24} /> : <Menu size={24} />}
+        </button>
 
-      {/* =====================================================
-          MENÚ NARANJA
-      ====================================================== */}
+        <Link to="/" className="shrink-0">
+          <img src={logo} alt="Hipermaxi" className="h-10 w-auto object-contain sm:h-12" />
+        </Link>
 
-      <nav className="bg-orange-500">
+        <Buscador className="hidden max-w-2xl flex-1 md:block" />
 
-        <div className="container mx-auto flex items-center justify-center px-4">
+        <div className="ml-auto flex items-center gap-5 md:ml-0">
+          <MiCuenta />
 
-
-          <NavLink
-            to="/"
-            className={({ isActive }) =>
-              `
-                px-6
-                py-3
-                text-sm
-                font-medium
-                transition
-                ${isActive
-                ? 'bg-orange-700 text-white'
-                : 'text-white hover:bg-orange-600'
-              }
-              `
-            }
+          {/* Carrito con contador */}
+          <button
+            type="button"
+            onClick={() => setAbierto(true)}
+            className="relative flex flex-col items-center text-gray-700 transition hover:text-hiper-orange"
+            aria-label={`Abrir carrito (${totalItems} productos)`}
           >
-            Inicio
-          </NavLink>
-
-
-
-
-
-
-          <NavLink
-            to="/admin/productos"
-            className={({ isActive }) =>
-              `
-                px-6
-                py-3
-                text-sm
-                font-medium
-                transition
-                ${isActive
-                ? 'bg-orange-700 text-white'
-                : 'text-white hover:bg-orange-600'
-              }
-              `
-            }
-          >
-            Admin productos
-          </NavLink>
-
+            <ShoppingCart size={24} strokeWidth={1.8} />
+            {totalItems > 0 && (
+              <span className="absolute -right-2.5 -top-2 flex h-5 min-w-5 items-center justify-center rounded-full bg-hiper-orange px-1 text-[11px] font-bold text-white">
+                {totalItems > 99 ? '99+' : totalItems}
+              </span>
+            )}
+            <span className="mt-0.5 hidden text-xs font-medium sm:block">Carrito</span>
+          </button>
         </div>
+      </div>
 
+      {/* Buscador en celular */}
+      <div className="px-4 pb-3 md:hidden">
+        <Buscador />
+      </div>
+
+      {/* Menú de categorías (escritorio) */}
+      <nav className="hidden bg-hiper-navy md:block" aria-label="Categorías">
+        <div className="mx-auto max-w-7xl overflow-x-auto px-4 [scrollbar-width:thin]">
+          <MenuCategorias />
+        </div>
       </nav>
 
+      {/* Menú desplegable de categorías (celular) */}
+      {menuMovil && (
+        <nav className="max-h-[60vh] overflow-y-auto border-t bg-white px-4 py-3 shadow-lg md:hidden" aria-label="Categorías">
+          <p className="mb-2 px-3 text-xs font-semibold uppercase tracking-wide text-gray-400">Categorías</p>
+          <MenuCategorias vertical onElegir={() => setMenuMovil(false)} />
+        </nav>
+      )}
+
+      {/* Panel lateral del carrito */}
+      <Drawer open={abierto} onOpenChange={setAbierto}>
+        <DrawerContent>
+          <CarroCompra />
+        </DrawerContent>
+      </Drawer>
     </header>
   );
 }
-
 
 export default Header;

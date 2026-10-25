@@ -4,6 +4,7 @@ import MainLayout from '../layouts/MainLayout';
 import Login from '../componentes/LoginForm';
 import ProductDetail from '../pages/ProductDetail';
 import Inicio from '../pages/Inicio';
+import Tienda from '../pages/Tienda';
 import ProductosDolibarr from '../pages/ProductosDolibarr';
 
 // Todas las rutas de la aplicación
@@ -14,6 +15,7 @@ const AppRoutes = () => {
         <Route path='/login' element={<Login />} />
         <Route element={<MainLayout />} >
           <Route index element={<Inicio />} />
+          <Route path="/tienda" element={<Tienda />} />
           <Route path="/producto/:id" element={<ProductDetail />} />
           {/* Panel de administrador (se protege por rol en la Fase 3) */}
           <Route path="/admin/productos" element={<ProductosDolibarr />} />

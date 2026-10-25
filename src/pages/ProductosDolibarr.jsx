@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import toast, { Toaster } from 'react-hot-toast';
+import toast from 'react-hot-toast';
 import {
   Plus, Search, Pencil, RefreshCw, ChevronLeft, ChevronRight,
   Package, Wrench, AlertTriangle, Barcode, ShoppingCart, Boxes,
@@ -68,7 +68,6 @@ export const ProductosDolibarr = () => {
 
   return (
     <section className="mx-auto max-w-7xl space-y-6">
-      <Toaster position="top-right" toastOptions={{ style: { borderRadius: '14px', fontSize: '14px' } }} />
 
       {/* Hero */}
       <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-indigo-950 to-violet-900 p-8 text-white shadow-xl">

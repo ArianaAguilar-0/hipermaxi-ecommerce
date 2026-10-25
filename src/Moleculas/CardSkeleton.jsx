@@ -4,10 +4,10 @@ export const CardSkeleton = () => {
   return (
     <>
     
-    <div className='bg-white border border-gray-200 reounded-lg p-4 shadow-sm animate-pulse flex flex-col justify-between' >
+    <div className='bg-white border border-gray-200 rounded-2xl p-3 shadow-sm animate-pulse flex flex-col justify-between' >
       <div>
         {/* Placeholder visual para la imagen del producto*/}
-        <div className='w-full h-48 bg-gray-300 rounded-md mb-4' ></div>
+        <div className='w-full aspect-square bg-gray-200 rounded-xl mb-4' ></div>
         {/* Placeholder para el título */}
         <div className='h-6 bg-gray-300 rounded w-3/4 mb-3' ></div>
         {/* Placeholder para la descripciom */}

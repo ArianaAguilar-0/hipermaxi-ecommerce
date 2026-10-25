@@ -1,12 +1,44 @@
 import dolibarrClient from './dolibarrClient';
 
-// Escapa comillas simples para usarlas dentro de sqlfilters
-const escapeSql = (value) => String(value).replace(/'/g, "\\'");
-
 const toNumber = (v, def = 0) => {
   const n = parseFloat(v);
   return Number.isFinite(n) ? n : def;
 };
+
+// Limpia el texto de búsqueda para usarlo dentro de sqlfilters:
+// - quita ( ) que rompen el balance de paréntesis (Dolibarr responde 400)
+// - quita " \ < > ; que la protección anti-inyección de Dolibarr bloquea (403)
+// - escapa las comillas simples
+export const limpiarBusqueda = (texto) =>
+  String(texto ?? '')
+    .replace(/[()"\\<>;]/g, ' ')
+    .trim()
+    .slice(0, 60)
+    .replace(/'/g, "\\'");
+
+/**
+ * Filtro de búsqueda:
+ * - cliente o visitante: solo por nombre (t.label)
+ * - administrador: por nombre, referencia o código de barras
+ */
+export const filtroBusqueda = (texto, esAdmin = false) => {
+  const s = limpiarBusqueda(texto);
+  if (!s) return '';
+  if (!esAdmin) return `(t.label:like:'%${s}%')`;
+  return `(t.label:like:'%${s}%') or (t.ref:like:'%${s}%') or (t.barcode:like:'%${s}%')`;
+};
+
+/** Convierte un producto de Dolibarr al formato que usa la tienda. */
+export const normalizarProducto = (p = {}) => ({
+  id: String(p.id),
+  ref: p.ref ?? '',
+  label: p.label ?? '',
+  descripcion: p.description ?? '',
+  barcode: p.barcode ?? '',
+  precio: toNumber(p.price_ttc), // precio con impuestos
+  tva_tx: toNumber(p.tva_tx),
+  stock: toNumber(p.stock_reel),
+});
 
 /**
  * Convierte los datos del formulario al payload que espera Dolibarr:
@@ -84,10 +116,9 @@ export const ProductosDolibarrService = {
       limit,
       page,
     };
-    if (search.trim()) {
-      const s = escapeSql(search.trim());
-      params.sqlfilters = `(t.ref:like:'%${s}%') or (t.label:like:'%${s}%')`;
-    }
+    // El panel de administración busca por nombre, referencia o código de barras
+    const filtro = filtroBusqueda(search, true);
+    if (filtro) params.sqlfilters = filtro;
     try {
       const { data } = await dolibarrClient.get('/products', { params, signal });
       return Array.isArray(data) ? data : data?.data ?? [];
@@ -96,6 +127,51 @@ export const ProductosDolibarrService = {
       if (error?.response?.status === 404) return [];
       throw error;
     }
+  },
+
+  /**
+   * Catálogo de la tienda: solo productos (mode=1) en venta, con stock y paginación.
+   * Devuelve { productos, total, paginas }.
+   */
+  getCatalogo: async ({ page = 0, limit = 12, categoria, texto = '', esAdmin = false, recientes = false, signal } = {}) => {
+    const filtros = ['(t.tosell:=:1)'];
+    const busqueda = filtroBusqueda(texto, esAdmin);
+    if (busqueda) filtros.push(`(${busqueda})`);
+
+    const params = {
+      mode: 1,
+      limit,
+      page,
+      // Orden alfabético o, para "destacados", los más recientes primero
+      sortfield: recientes ? 't.rowid' : 't.label',
+      sortorder: recientes ? 'DESC' : 'ASC',
+      includestockdata: 1,
+      pagination_data: true,
+      sqlfilters: filtros.join(' and '),
+    };
+    if (categoria) params.category = categoria;
+
+    try {
+      const { data } = await dolibarrClient.get('/products', { params, signal });
+      const lista = Array.isArray(data) ? data : data?.data ?? [];
+      return {
+        productos: lista.map(normalizarProducto),
+        total: Number(data?.pagination?.total ?? lista.length),
+        paginas: Number(data?.pagination?.page_count ?? 1),
+      };
+    } catch (error) {
+      if (error?.response?.status === 404) return { productos: [], total: 0, paginas: 0 };
+      throw error;
+    }
+  },
+
+  /** Detalle de un producto con su stock (GET /products/{id}). */
+  getProductoDetalle: async (id, signal) => {
+    const { data } = await dolibarrClient.get(`/products/${id}`, {
+      params: { includestockdata: 1 },
+      signal,
+    });
+    return { ...normalizarProducto(data), enVenta: String(data?.status) === '1', tipo: String(data?.type) };
   },
 
   getProductoById: async (id, signal) => {

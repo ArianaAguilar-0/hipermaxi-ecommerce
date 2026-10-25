@@ -33,6 +33,22 @@ dolibarrClient.interceptors.request.use((config) => {
   return config;
 });
 
+// Reintenta las consultas GET (no modifican datos) si la conexión con Dolibarr falla
+const MAX_REINTENTOS = 2;
+dolibarrClient.interceptors.response.use(undefined, async (error) => {
+  const config = error?.config;
+  const status = error?.response?.status;
+  const falloDeRed = !error?.response || status === 502 || status === 504;
+  const esGet = config?.method === 'get';
+  if (!esGet || !falloDeRed || axios.isCancel(error) || config.signal?.aborted) {
+    return Promise.reject(error);
+  }
+  config.__reintentos = (config.__reintentos || 0) + 1;
+  if (config.__reintentos > MAX_REINTENTOS) return Promise.reject(error);
+  await new Promise((r) => setTimeout(r, 400 * config.__reintentos));
+  return dolibarrClient(config);
+});
+
 // Normaliza los mensajes de error que devuelve Dolibarr
 export const getErrorMessage = (error) => {
   if (axios.isCancel(error)) return 'Petición cancelada';
@@ -46,7 +62,7 @@ export const getErrorMessage = (error) => {
   if (status === 403) {
     return `Acceso denegado (403): el usuario de Dolibarr no tiene permiso para esta acción.${detalle ? ` ${detalle}` : ''}`;
   }
-  if (!error?.response) {
+  if (!error?.response || status === 502 || status === 504) {
     return 'No se pudo conectar con Dolibarr. Revisa .env.local y reinicia "npm run dev".';
   }
   return detalle || error?.message || 'Error desconocido al comunicarse con Dolibarr';
