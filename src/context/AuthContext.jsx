@@ -49,15 +49,29 @@ export const AuthProvider = ({ children }) => {
         }
     };
 
+    // Sesión temporal de prueba (solo mientras no existe el login con roles de la Fase 3).
+    // No tiene token: las peticiones usan la key de servicio del proxy.
+    const iniciarSesionPrueba = () => {
+        const nueva = { token: null, temporal: true, user: { login: 'prueba', nombre: 'Sesión de prueba' } };
+        try {
+            sessionStorage.setItem(SESSION_KEY, JSON.stringify(nueva));
+        } catch {
+            // Sin sessionStorage: la sesión dura hasta recargar
+        }
+        setSesion(nueva);
+    };
+
     const contextValue = {
         user: sesion?.user ?? null,
         token: sesion?.token ?? null,
         loading,
-        isAutenticated: !!sesion?.token,
+        isAutenticated: !!sesion,
+        esTemporal: !!sesion?.temporal,
         // El rol real se obtiene en la Fase 3 (GET /users/info)
         esAdmin: sesion?.user?.rol === 'admin',
         login,
         logout,
+        iniciarSesionPrueba,
     };
 
     return (

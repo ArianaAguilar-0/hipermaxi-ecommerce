@@ -1,6 +1,5 @@
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Minus, Plus, Trash2, ShoppingBag } from 'lucide-react';
-import toast from 'react-hot-toast';
 import { DrawerCloseButton } from '@/components/ui/drawer';
 import ImagenProducto from '@/componentes/tienda/ImagenProducto';
 import { useCart } from '@/context/CartContext';
@@ -10,9 +9,12 @@ import { formatearBs } from '@/lib/formato';
 export default function CarroCompra() {
   const { items, totalItems, subtotal, cambiarCantidad, quitar, setAbierto } = useCart();
 
+  const navigate = useNavigate();
+
+  // "Pagar": cierra el panel y va al checkout (si no hay sesión, allí se pide iniciarla)
   const handlePagar = () => {
-    // El checkout se conecta en la Fase 2
-    toast('El pago se habilita en la siguiente fase', { icon: '🛒' });
+    setAbierto(false);
+    navigate('/checkout');
   };
 
   return (

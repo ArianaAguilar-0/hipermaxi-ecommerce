@@ -33,14 +33,17 @@ dolibarrClient.interceptors.request.use((config) => {
   return config;
 });
 
-// Reintenta las consultas GET (no modifican datos) si la conexión con Dolibarr falla
-const MAX_REINTENTOS = 2;
+// Reintentos cuando la conexión con Dolibarr falla:
+// - GET (no modifica datos): ante cualquier fallo de red
+// - POST/PUT: solo si el proxy confirma que la petición NO llegó a Dolibarr (x-reintentable)
+const MAX_REINTENTOS = 3;
 dolibarrClient.interceptors.response.use(undefined, async (error) => {
   const config = error?.config;
   const status = error?.response?.status;
-  const falloDeRed = !error?.response || status === 502 || status === 504;
-  const esGet = config?.method === 'get';
-  if (!esGet || !falloDeRed || axios.isCancel(error) || config.signal?.aborted) {
+  const noLlego = status === 503 && error?.response?.headers?.['x-reintentable'] === '1';
+  const falloDeRed = !error?.response || status === 502 || status === 504 || noLlego;
+  const reintentable = config?.method === 'get' ? falloDeRed : noLlego;
+  if (!config || !reintentable || axios.isCancel(error) || config.signal?.aborted) {
     return Promise.reject(error);
   }
   config.__reintentos = (config.__reintentos || 0) + 1;
@@ -62,7 +65,7 @@ export const getErrorMessage = (error) => {
   if (status === 403) {
     return `Acceso denegado (403): el usuario de Dolibarr no tiene permiso para esta acción.${detalle ? ` ${detalle}` : ''}`;
   }
-  if (!error?.response || status === 502 || status === 504) {
+  if (!error?.response || status === 502 || status === 503 || status === 504) {
     return 'No se pudo conectar con Dolibarr. Revisa .env.local y reinicia "npm run dev".';
   }
   return detalle || error?.message || 'Error desconocido al comunicarse con Dolibarr';

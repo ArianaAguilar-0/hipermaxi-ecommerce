@@ -79,6 +79,15 @@ export const CartProvider = ({ children }) => {
     );
   };
 
+  // Actualiza precio y stock de un ítem con datos frescos de Dolibarr (antes de pagar)
+  const actualizarItem = (id, { precio, stock }) => {
+    setItems((prev) =>
+      prev.map((i) =>
+        i.id === id ? { ...i, precio, stock, cantidad: Math.max(1, Math.min(i.cantidad, stock)) } : i
+      )
+    );
+  };
+
   const quitar = (id) => setItems((prev) => prev.filter((i) => i.id !== id));
   const vaciar = () => setItems([]);
 
@@ -87,7 +96,7 @@ export const CartProvider = ({ children }) => {
 
   const value = {
     items, totalItems, subtotal,
-    agregar, cambiarCantidad, quitar, vaciar,
+    agregar, cambiarCantidad, actualizarItem, quitar, vaciar,
     abierto, setAbierto,
   };
 

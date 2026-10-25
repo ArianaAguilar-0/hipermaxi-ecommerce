@@ -58,16 +58,27 @@ export default defineConfig(({ mode }) => {
                   // (algunas conexiones se pierden en la red y tardarían ~21 s en fallar)
                   const limitarConexion = (socket) => {
                     if (!socket.connecting) return;
-                    const timer = setTimeout(
-                      () => socket.destroy(new Error('Tiempo de conexión agotado con Dolibarr')),
-                      6000
-                    );
+                    const timer = setTimeout(() => {
+                      const error = new Error('Tiempo de conexión agotado con Dolibarr');
+                      error.code = 'SIN_CONEXION';
+                      socket.destroy(error);
+                    }, 6000);
                     socket.once('connect', () => clearTimeout(timer));
                     socket.once('close', () => clearTimeout(timer));
                   };
                   // El socket puede estar ya asignado o llegar después
                   if (proxyReq.socket) limitarConexion(proxyReq.socket);
                   else proxyReq.once('socket', limitarConexion);
+                });
+
+                // Si la conexión nunca se estableció, la petición NO llegó a Dolibarr:
+                // se responde 503 con "x-reintentable" para que el cliente pueda reintentar
+                // sin riesgo de duplicar pedidos o pagos.
+                proxy.on('error', (err, req, res) => {
+                  const sinConexion = ['SIN_CONEXION', 'ECONNREFUSED', 'ENOTFOUND', 'EAI_AGAIN'].includes(err?.code);
+                  if (!sinConexion || !res || res.headersSent || typeof res.writeHead !== 'function') return;
+                  res.writeHead(503, { 'Content-Type': 'application/json', 'x-reintentable': '1' });
+                  res.end(JSON.stringify({ error: { code: 503, message: 'No se pudo conectar con Dolibarr' } }));
                 });
               },
             },

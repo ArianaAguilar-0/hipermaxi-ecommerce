@@ -36,6 +36,7 @@ export const normalizarProducto = (p = {}) => ({
   descripcion: p.description ?? '',
   barcode: p.barcode ?? '',
   precio: toNumber(p.price_ttc), // precio con impuestos
+  precioSinImpuesto: toNumber(p.price), // base para las líneas del pedido
   tva_tx: toNumber(p.tva_tx),
   stock: toNumber(p.stock_reel),
 });
@@ -171,7 +172,11 @@ export const ProductosDolibarrService = {
       params: { includestockdata: 1 },
       signal,
     });
-    return { ...normalizarProducto(data), enVenta: String(data?.status) === '1', tipo: String(data?.type) };
+    // Stock por almacén: { idAlmacen: cantidad } (para armar la expedición)
+    const stockPorAlmacen = Object.fromEntries(
+      Object.entries(data?.stock_warehouse || {}).map(([alm, s]) => [alm, toNumber(s?.real)])
+    );
+    return { ...normalizarProducto(data), enVenta: String(data?.status) === '1', tipo: String(data?.type), stockPorAlmacen };
   },
 
   getProductoById: async (id, signal) => {
