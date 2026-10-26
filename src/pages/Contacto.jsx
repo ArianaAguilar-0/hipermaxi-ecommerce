@@ -1,13 +1,13 @@
 import { useState } from 'react';
-import { Phone, Mail, Clock, MessageSquare, Send } from 'lucide-react';
+import { Phone, Mail, Clock, MapPin, MessageSquare, Send } from 'lucide-react';
 import toast from 'react-hot-toast';
 import PaginaInformativa, { Tarjeta } from '@/componentes/tienda/PaginaInformativa';
 import CampoTexto from '@/componentes/checkout/CampoTexto';
-import { DATOS_CONTACTO } from '@/lib/datosContacto';
+import { DATOS_CONTACTO, enlaceCorreo } from '@/lib/datosContacto';
 
 const vacio = { nombre: '', correo: '', mensaje: '' };
 
-// Contacto: datos de ejemplo y un formulario que NO envía nada (solo muestra un toast)
+// Contacto: datos de la tienda (src/lib/datosContacto.js) y un formulario que NO envía nada (solo muestra un toast)
 export const Contacto = () => {
   const [form, setForm] = useState(vacio);
   const [errores, setErrores] = useState({});
@@ -29,9 +29,14 @@ export const Contacto = () => {
     <PaginaInformativa titulo="Contacto" subtitulo="Estamos para ayudarte" Icono={MessageSquare}>
       <div className="grid gap-4 md:grid-cols-[1fr_1.4fr]">
         <Tarjeta titulo="Atención al cliente">
-          <p className="flex items-center gap-2"><Phone size={16} className="shrink-0 text-hiper-orange" /> {DATOS_CONTACTO.telefono}</p>
-          <p className="flex items-center gap-2"><Mail size={16} className="shrink-0 text-hiper-orange" /> {DATOS_CONTACTO.correo}</p>
+          <a href={DATOS_CONTACTO.telefonoEnlace} className="flex items-center gap-2 hover:text-hiper-orange">
+            <Phone size={16} className="shrink-0 text-hiper-orange" /> {DATOS_CONTACTO.telefono}
+          </a>
+          <a href={enlaceCorreo} className="flex items-center gap-2 break-all hover:text-hiper-orange">
+            <Mail size={16} className="shrink-0 text-hiper-orange" /> {DATOS_CONTACTO.correo}
+          </a>
           <p className="flex items-center gap-2"><Clock size={16} className="shrink-0 text-hiper-orange" /> {DATOS_CONTACTO.horario}</p>
+          <p className="flex items-center gap-2"><MapPin size={16} className="shrink-0 text-hiper-orange" /> {DATOS_CONTACTO.ubicacion}</p>
         </Tarjeta>
 
         <Tarjeta titulo="Escríbenos">

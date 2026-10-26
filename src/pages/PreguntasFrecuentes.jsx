@@ -1,5 +1,6 @@
 import { ChevronDown, HelpCircle } from 'lucide-react';
-import PaginaInformativa from '@/componentes/tienda/PaginaInformativa';
+import PaginaInformativa, { Tarjeta } from '@/componentes/tienda/PaginaInformativa';
+import { DATOS_CONTACTO, enlaceCorreo } from '@/lib/datosContacto';
 
 const PREGUNTAS = [
   {
@@ -36,6 +37,13 @@ export const PreguntasFrecuentes = () => (
         <p className="mt-3 text-sm leading-6 text-gray-600">{respuesta}</p>
       </details>
     ))}
+    <Tarjeta titulo="¿Tienes otra duda?">
+      <p>
+        Llámanos al <a href={DATOS_CONTACTO.telefonoEnlace} className="font-semibold text-hiper-orange hover:underline">{DATOS_CONTACTO.telefono}</a> o
+        escríbenos a <a href={enlaceCorreo} className="break-all font-semibold text-hiper-orange hover:underline">{DATOS_CONTACTO.correo}</a>.
+        Atendemos {DATOS_CONTACTO.horario.charAt(0).toLowerCase() + DATOS_CONTACTO.horario.slice(1)}.
+      </p>
+    </Tarjeta>
   </PaginaInformativa>
 );
 

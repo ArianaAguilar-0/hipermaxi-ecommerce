@@ -1,7 +1,7 @@
 import { Link } from 'react-router-dom';
 import { Phone, Mail, MapPin, Clock } from 'lucide-react';
 import { FaFacebookF, FaInstagram, FaYoutube, FaTiktok } from 'react-icons/fa6';
-import { DATOS_CONTACTO } from '../lib/datosContacto';
+import { DATOS_CONTACTO, enlaceCorreo } from '../lib/datosContacto';
 
 // Páginas informativas de la tienda
 const SOBRE_NOSOTROS = [
@@ -39,8 +39,16 @@ export function Footer() {
         <div>
           <h3 className="!text-base font-bold uppercase tracking-wide text-hiper-orange">Contacto</h3>
           <ul className="mt-4 space-y-3 text-sm text-white/80">
-            <li className="flex items-center gap-2"><Phone size={16} className="shrink-0" /> {DATOS_CONTACTO.telefono}</li>
-            <li className="flex items-center gap-2"><Mail size={16} className="shrink-0" /> {DATOS_CONTACTO.correo}</li>
+            <li>
+              <a href={DATOS_CONTACTO.telefonoEnlace} className="flex items-center gap-2 transition hover:text-white hover:underline">
+                <Phone size={16} className="shrink-0" /> {DATOS_CONTACTO.telefono}
+              </a>
+            </li>
+            <li>
+              <a href={enlaceCorreo} className="flex items-center gap-2 break-all transition hover:text-white hover:underline">
+                <Mail size={16} className="shrink-0" /> {DATOS_CONTACTO.correo}
+              </a>
+            </li>
             <li className="flex items-center gap-2"><Clock size={16} className="shrink-0" /> {DATOS_CONTACTO.horario}</li>
             <li className="flex items-center gap-2"><MapPin size={16} className="shrink-0" /> {DATOS_CONTACTO.ubicacion}</li>
           </ul>
