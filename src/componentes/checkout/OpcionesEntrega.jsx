@@ -71,6 +71,9 @@ export const OpcionesEntrega = ({ valores, errores, onChange, deshabilitado }) =
           onChange={(e) => onChange({ ...valores, direccion: e.target.value })}
           error={errores.direccionEntrega} disabled={deshabilitado} placeholder="Calle, número, zona y referencia" />
       )}
+      {valores.tipo === 'domicilio' && (
+        <p className="-mt-2 text-xs text-gray-500">Esta dirección se guarda solo en este pedido.</p>
+      )}
     </div>
   );
 };

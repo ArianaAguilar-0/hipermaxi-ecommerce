@@ -134,11 +134,11 @@ export const Checkout = () => {
           <Paso numero={1} titulo="Datos de facturación">
             {socidCliente && (
               <p className="mb-4 flex items-center gap-2 rounded-xl bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
-                <BadgeCheck size={16} /> Datos de tu cuenta de cliente en Dolibarr. Para cambiarlos, contacta a la tienda.
+                <BadgeCheck size={16} /> Datos autocompletados
               </p>
             )}
             <FormularioFacturacion valores={cliente} errores={errores} onChange={setCliente}
-              deshabilitado={procesando || bloqueada || Boolean(socidCliente)} />
+              deshabilitado={procesando || bloqueada} soloLectura={Boolean(socidCliente)} />
           </Paso>
 
           <Paso numero={2} titulo="Tipo de entrega">
