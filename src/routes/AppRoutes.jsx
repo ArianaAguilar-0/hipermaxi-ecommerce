@@ -9,6 +9,11 @@ import AdminProductos from '../pages/AdminProductos';
 import RutaAdmin from './RutaAdmin';
 import Checkout from '../pages/Checkout';
 import CompraExitosa from '../pages/CompraExitosa';
+import QuienesSomos from '../pages/QuienesSomos';
+import Sucursales from '../pages/Sucursales';
+import PreguntasFrecuentes from '../pages/PreguntasFrecuentes';
+import Terminos from '../pages/Terminos';
+import Contacto from '../pages/Contacto';
 
 // Todas las rutas de la aplicación
 const AppRoutes = () => {
@@ -22,6 +27,12 @@ const AppRoutes = () => {
           <Route path="/producto/:id" element={<ProductDetail />} />
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/compra-exitosa" element={<CompraExitosa />} />
+          {/* Páginas informativas (enlaces del Footer) */}
+          <Route path="/quienes-somos" element={<QuienesSomos />} />
+          <Route path="/sucursales" element={<Sucursales />} />
+          <Route path="/preguntas-frecuentes" element={<PreguntasFrecuentes />} />
+          <Route path="/terminos" element={<Terminos />} />
+          <Route path="/contacto" element={<Contacto />} />
           {/* Panel de administrador: solo rol admin */}
           <Route path="/admin/productos" element={<RutaAdmin><AdminProductos /></RutaAdmin>} />
         </Route>

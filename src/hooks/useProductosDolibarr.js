@@ -51,7 +51,7 @@ export const useProductosDolibarr = ({ limit = 10, enabled = true } = {}) => {
       return { ok: true, data: res };
     } catch (err) {
       const creado = err instanceof ErrorTrasCrear;
-      return { ok: false, creado, error: creado ? err.message : getErrorMessage(err) };
+      return { ok: false, creado, status: err?.response?.status, error: creado ? err.message : getErrorMessage(err) };
     } finally {
       enCurso.current = false;
       setIsSubmitting(false);
@@ -104,6 +104,9 @@ export const useProductosDolibarr = ({ limit = 10, enabled = true } = {}) => {
       return res;
     });
 
+  // DELETE: si Dolibarr lo rechaza, el producto sigue en la lista (se recarga desde Dolibarr)
+  const eliminarProducto = (id) => ejecutar(() => ProductosDolibarrService.deleteProducto(id));
+
   const buscar = (texto) => {
     setPage(0);
     setSearch(texto);
@@ -121,6 +124,7 @@ export const useProductosDolibarr = ({ limit = 10, enabled = true } = {}) => {
     recargar,
     crearProducto,
     actualizarProducto,
+    eliminarProducto,
     hasNextPage: !loading && productos.length === limit,
   };
 };

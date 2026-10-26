@@ -9,7 +9,7 @@ const Slider = SliderModulo.default ?? SliderModulo;
 const BANNERS = [
   {
     titulo: 'Tu súper, a un clic',
-    texto: 'Productos con precios actualizados al instante.',
+    texto: 'Todo lo que necesitas para tu hogar, sin salir de casa.',
     boton: 'Ver productos',
     Icono: Percent,
     fondo: 'from-hiper-orange to-hiper-orange-dark',

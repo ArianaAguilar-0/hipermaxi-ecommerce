@@ -240,6 +240,15 @@ export const ProductosDolibarrService = {
     return data;
   },
 
+  /**
+   * Elimina un producto (DELETE /products/{id}) con el token del admin, nunca con la key de servicio.
+   * Dolibarr lo rechaza si el producto ya se usa en pedidos, facturas o movimientos de stock.
+   */
+  deleteProducto: async (id) => {
+    const { data } = await dolibarrClient.delete(`/products/${id}`, { conToken: true });
+    return data;
+  },
+
   /** Fija el precio de venta (PUT /products/{id} solo con precio, base e IVA). */
   updatePrecio: async (id, form) => {
     const { data } = await dolibarrClient.put(`/products/${id}`, {

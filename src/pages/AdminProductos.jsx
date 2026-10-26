@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import {
-  Plus, Search, Pencil, RefreshCw, ChevronLeft, ChevronRight, Package, Wrench, Barcode, Loader2, ShieldCheck,
+  Plus, Search, Pencil, Trash2, RefreshCw, ChevronLeft, ChevronRight, Package, Wrench, Barcode, Loader2, ShieldCheck,
 } from 'lucide-react';
 import useProductosDolibarr from '../hooks/useProductosDolibarr';
 import useCategorias from '../hooks/useCategorias';
 import ProductoFormModal from '../componentes/dolibarr/ProductoFormModal';
+import ConfirmarEliminarProducto from '../componentes/admin/ConfirmarEliminarProducto';
 import ProductosDolibarrService from '../services/productosDolibarrService';
 import { getErrorMessage } from '../services/dolibarrClient';
 import ErrorMessage from '../shimer/pulse/ErrorMessage';
@@ -21,19 +22,22 @@ const Insignia = ({ activa, children }) => (
   </span>
 );
 
-// Panel de administrador: consultar, crear y editar productos (sin eliminar).
+// Panel de administrador: consultar, crear, editar y eliminar productos.
 // Todas las operaciones usan el token del administrador, no la key de servicio.
 export const AdminProductos = () => {
-  const { user } = useAuth();
+  const { user, esAdmin } = useAuth();
   const { categorias } = useCategorias();
   const [formOpen, setFormOpen] = useState(false);
   const [editando, setEditando] = useState(null); // { producto, categoria }
   const [abriendo, setAbriendo] = useState(null);
   const [texto, setTexto] = useState('');
+  // Producto a eliminar y error de Dolibarr al intentarlo
+  const [aEliminar, setAEliminar] = useState(null);
+  const [errorEliminar, setErrorEliminar] = useState('');
 
   const {
     productos, page, setPage, buscar, loading, isSubmitting, error, recargar,
-    crearProducto, actualizarProducto, hasNextPage,
+    crearProducto, actualizarProducto, eliminarProducto, hasNextPage,
   } = useProductosDolibarr({ limit: LIMIT });
 
   // Búsqueda con debounce (nombre, referencia o código de barras)
@@ -75,6 +79,23 @@ export const AdminProductos = () => {
       // Si el producto llegó a crearse, se cierra el formulario para no crearlo dos veces
       if (res.creado) setFormOpen(false);
     }
+  };
+
+  const abrirEliminar = (p) => { setErrorEliminar(''); setAEliminar(p); };
+
+  const confirmarEliminar = async () => {
+    const res = await eliminarProducto(aEliminar.id);
+    if (res.ok) {
+      toast.success('Producto eliminado');
+      setAEliminar(null);
+      return;
+    }
+    // Si Dolibarr lo rechaza, el producto sigue en la lista y se explica el motivo
+    setErrorEliminar(
+      res.status === 403
+        ? 'No tienes permiso para eliminar productos en Dolibarr (Productos → Eliminar productos).'
+        : `Dolibarr no permitió eliminarlo: ${res.error}. Si el producto ya tiene pedidos, facturas o movimientos de stock, no se puede borrar; puedes dejarlo "fuera de venta" editándolo.`
+    );
   };
 
   return (
@@ -121,7 +142,7 @@ export const AdminProductos = () => {
                 <th className="px-5 py-3 text-right">Precio</th>
                 <th className="px-5 py-3 text-right">Stock</th>
                 <th className="px-5 py-3">Estado</th>
-                <th className="px-5 py-3 text-right">Editar</th>
+                <th className="px-5 py-3 text-right">Acciones</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -167,10 +188,18 @@ export const AdminProductos = () => {
                       </div>
                     </td>
                     <td className="px-5 py-4 text-right">
-                      <button id={`btn-editar-${p.id}`} onClick={() => abrirEditar(p)} title="Editar" disabled={abriendo === p.id}
-                        className="rounded-lg p-2 text-hiper-navy transition hover:bg-hiper-navy-light disabled:opacity-50">
-                        {abriendo === p.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Pencil className="h-4 w-4" />}
-                      </button>
+                      <div className="flex justify-end gap-1">
+                        <button id={`btn-editar-${p.id}`} onClick={() => abrirEditar(p)} title="Editar" disabled={abriendo === p.id}
+                          className="rounded-lg p-2 text-hiper-navy transition hover:bg-hiper-navy-light disabled:opacity-50">
+                          {abriendo === p.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Pencil className="h-4 w-4" />}
+                        </button>
+                        {esAdmin && (
+                          <button id={`btn-eliminar-${p.id}`} onClick={() => abrirEliminar(p)} title="Eliminar"
+                            className="rounded-lg p-2 text-red-600 transition hover:bg-red-50">
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        )}
+                      </div>
                     </td>
                   </tr>
                 );
@@ -210,6 +239,17 @@ export const AdminProductos = () => {
           isSubmitting={isSubmitting}
           onClose={() => setFormOpen(false)}
           onSubmit={handleSubmit}
+        />
+      )}
+
+      {aEliminar && (
+        <ConfirmarEliminarProducto
+          key={aEliminar.id}
+          producto={aEliminar}
+          eliminando={isSubmitting}
+          error={errorEliminar}
+          onConfirmar={confirmarEliminar}
+          onCerrar={() => setAEliminar(null)}
         />
       )}
     </section>
