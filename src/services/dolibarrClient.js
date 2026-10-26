@@ -26,23 +26,29 @@ const dolibarrClient = axios.create({
   },
 });
 
-// Si hay sesión, se envía el token del usuario; si no, el proxy pone la key de servicio
+/**
+ * Token del usuario: solo se envía en las peticiones marcadas con `conToken: true`
+ * (identidad del usuario y escrituras del administrador). Todo lo demás (catálogo, compra)
+ * va sin token y el proxy agrega la key de servicio.
+ * Una petición con `conToken` NUNCA cae a la key de servicio: si no hay sesión, se cancela.
+ */
 dolibarrClient.interceptors.request.use((config) => {
-  const token = getTokenUsuario();
-  if (token) config.headers.DOLAPIKEY = token;
+  if (config.conToken && !config.headers.DOLAPIKEY) {
+    const token = getTokenUsuario();
+    if (!token) return Promise.reject(new Error('Tu sesión expiró. Vuelve a iniciar sesión.'));
+    config.headers.DOLAPIKEY = token;
+  }
   return config;
 });
 
-// Reintentos cuando la conexión con Dolibarr falla:
-// - GET (no modifica datos): ante cualquier fallo de red
-// - POST/PUT: solo si el proxy confirma que la petición NO llegó a Dolibarr (x-reintentable)
+// Reintentos automáticos SOLO para GET (no modifican datos) cuando falla la conexión.
+// POST/PUT/DELETE nunca se reintentan solos: el error se muestra y el usuario decide.
 const MAX_REINTENTOS = 3;
 dolibarrClient.interceptors.response.use(undefined, async (error) => {
   const config = error?.config;
   const status = error?.response?.status;
-  const noLlego = status === 503 && error?.response?.headers?.['x-reintentable'] === '1';
-  const falloDeRed = !error?.response || status === 502 || status === 504 || noLlego;
-  const reintentable = config?.method === 'get' ? falloDeRed : noLlego;
+  const falloDeRed = !error?.response || status === 502 || status === 503 || status === 504;
+  const reintentable = config?.method === 'get' && falloDeRed;
   if (!config || !reintentable || axios.isCancel(error) || config.signal?.aborted) {
     return Promise.reject(error);
   }
@@ -57,7 +63,11 @@ export const getErrorMessage = (error) => {
   if (axios.isCancel(error)) return 'Petición cancelada';
   const status = error?.response?.status;
   const data = error?.response?.data;
-  const detalle = data?.error?.message || data?.message;
+  // Dolibarr pone el detalle en error["0"], error["1"]… (por ejemplo ErrorProductAlreadyExists)
+  const extras = Object.entries(data?.error || {})
+    .filter(([k, v]) => /^\d+$/.test(k) && v)
+    .map(([, v]) => v);
+  const detalle = [data?.error?.message || data?.message, ...extras].filter(Boolean).join(' — ');
 
   if (status === 401) {
     return `No autorizado (401): la key o el token no son válidos o expiraron.${detalle ? ` ${detalle}` : ''}`;

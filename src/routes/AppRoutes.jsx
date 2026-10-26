@@ -5,7 +5,8 @@ import Login from '../componentes/LoginForm';
 import ProductDetail from '../pages/ProductDetail';
 import Inicio from '../pages/Inicio';
 import Tienda from '../pages/Tienda';
-import ProductosDolibarr from '../pages/ProductosDolibarr';
+import AdminProductos from '../pages/AdminProductos';
+import RutaAdmin from './RutaAdmin';
 import Checkout from '../pages/Checkout';
 import CompraExitosa from '../pages/CompraExitosa';
 
@@ -14,15 +15,15 @@ const AppRoutes = () => {
   return (
     <BrowserRouter>
       <Routes>
-        <Route path='/login' element={<Login />} />
         <Route element={<MainLayout />} >
+          <Route path='/login' element={<Login />} />
           <Route index element={<Inicio />} />
           <Route path="/tienda" element={<Tienda />} />
           <Route path="/producto/:id" element={<ProductDetail />} />
           <Route path="/checkout" element={<Checkout />} />
           <Route path="/compra-exitosa" element={<CompraExitosa />} />
-          {/* Panel de administrador (se protege por rol en la Fase 3) */}
-          <Route path="/admin/productos" element={<ProductosDolibarr />} />
+          {/* Panel de administrador: solo rol admin */}
+          <Route path="/admin/productos" element={<RutaAdmin><AdminProductos /></RutaAdmin>} />
         </Route>
         <Route path="*" element={<NotFound />} />
       </Routes>

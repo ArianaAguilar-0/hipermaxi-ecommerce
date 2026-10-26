@@ -3,8 +3,8 @@ import { X, Save, Loader2, Package, Wrench } from 'lucide-react';
 import { productoVacio, fromDolibarr } from '../../services/productosDolibarrService';
 
 const inputCls =
-  'w-full rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm text-slate-800 shadow-sm outline-none transition placeholder:text-slate-400 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/15 disabled:opacity-60';
-const labelCls = 'mb-1 block text-xs font-semibold uppercase tracking-wide text-slate-500';
+  'w-full rounded-xl border border-gray-200 bg-white px-3 py-2 text-sm text-gray-800 shadow-sm outline-none transition placeholder:text-gray-400 focus:border-hiper-orange focus:ring-4 focus:ring-hiper-orange/15 disabled:opacity-60';
+const labelCls = 'mb-1 block text-xs font-semibold uppercase tracking-wide text-gray-500';
 
 const Field = ({ label, htmlFor, error, children, className = '' }) => (
   <div className={className}>
@@ -15,28 +15,30 @@ const Field = ({ label, htmlFor, error, children, className = '' }) => (
 );
 
 const Toggle = ({ id, checked, onChange, label, disabled }) => (
-  <label htmlFor={id} className="flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-slate-200 bg-slate-50 px-3 py-2">
-    <span className="text-sm font-medium text-slate-700">{label}</span>
+  <label htmlFor={id} className="flex cursor-pointer items-center justify-between gap-3 rounded-xl border border-gray-200 bg-gray-50 px-3 py-2">
+    <span className="text-sm font-medium text-gray-700">{label}</span>
     <span className="relative inline-flex items-center">
       <input id={id} type="checkbox" className="peer sr-only" checked={checked} disabled={disabled}
         onChange={(e) => onChange(e.target.checked)} />
-      <span className="h-6 w-11 rounded-full bg-slate-300 transition peer-checked:bg-emerald-500" />
+      <span className="h-6 w-11 rounded-full bg-gray-300 transition peer-checked:bg-hiper-orange" />
       <span className="absolute left-0.5 h-5 w-5 rounded-full bg-white shadow transition peer-checked:translate-x-5" />
     </span>
   </label>
 );
 
-const validar = (f) => {
+const validar = (f, esEdicion) => {
   const e = {};
-  if (!f.ref.trim()) e.ref = 'La referencia es obligatoria';
-  if (!f.label.trim()) e.label = 'La etiqueta es obligatoria';
+  if (!f.ref.trim()) e.ref = 'La referencia (código) es obligatoria';
+  if (!f.label.trim()) e.label = 'El nombre es obligatorio';
+  if (!esEdicion && !f.categoria) e.categoria = 'Elige una categoría';
   const price = parseFloat(f.price);
   const priceMin = parseFloat(f.price_min);
-  if (f.price !== '' && (isNaN(price) || price < 0)) e.price = 'Precio inválido';
+  if (f.price === '' || isNaN(price) || price <= 0) e.price = 'Ingresa un precio mayor a 0';
   if (f.price_min !== '' && (isNaN(priceMin) || priceMin < 0)) e.price_min = 'Precio mínimo inválido';
   if (!e.price && !e.price_min && f.price !== '' && f.price_min !== '' && priceMin > price)
     e.price_min = 'No puede ser mayor que el precio de venta';
   if (f.weight !== '' && (isNaN(parseFloat(f.weight)) || parseFloat(f.weight) < 0)) e.weight = 'Peso inválido';
+  if (f.barcode.trim() && !f.barcode_type) e.barcode_type = 'Elige el tipo de código de barras';
   return e;
 };
 
@@ -44,8 +46,11 @@ const validar = (f) => {
  * Montar solo cuando esté abierto y con `key` distinta por producto,
  * así el estado inicial se toma directamente de las props.
  */
-export const ProductoFormModal = ({ producto, onClose, onSubmit, isSubmitting }) => {
-  const [form, setForm] = useState(() => (producto ? fromDolibarr(producto) : productoVacio));
+export const ProductoFormModal = ({ producto, categorias = [], categoriaInicial = '', onClose, onSubmit, isSubmitting }) => {
+  const [form, setForm] = useState(() => ({
+    ...(producto ? fromDolibarr(producto) : productoVacio),
+    categoria: categoriaInicial,
+  }));
   const [errors, setErrors] = useState({});
   const esEdicion = Boolean(producto);
 
@@ -59,7 +64,7 @@ export const ProductoFormModal = ({ producto, onClose, onSubmit, isSubmitting })
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    const errs = validar(form);
+    const errs = validar(form, esEdicion);
     setErrors(errs);
     if (Object.keys(errs).length) return;
     await onSubmit(form);
@@ -69,12 +74,12 @@ export const ProductoFormModal = ({ producto, onClose, onSubmit, isSubmitting })
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-slate-900/50 backdrop-blur-sm animate-in fade-in" onClick={() => !isSubmitting && onClose()} />
+      <div className="absolute inset-0 bg-gray-900/50 backdrop-blur-sm animate-in fade-in" onClick={() => !isSubmitting && onClose()} />
       <form
         onSubmit={handleSubmit}
         className="relative flex max-h-[92vh] w-full max-w-3xl flex-col overflow-hidden rounded-3xl bg-white shadow-2xl ring-1 ring-black/5 animate-in fade-in zoom-in-95"
       >
-        <header className="flex items-center justify-between bg-gradient-to-r from-indigo-600 via-violet-600 to-fuchsia-600 px-6 py-4 text-white">
+        <header className="flex items-center justify-between bg-hiper-navy px-6 py-4 text-white">
           <div>
             <h2 className="!text-lg font-bold">{esEdicion ? 'Editar producto' : 'Nuevo producto'}</h2>
             <p className="text-xs text-white/80">
@@ -97,36 +102,45 @@ export const ProductoFormModal = ({ producto, onClose, onSubmit, isSubmitting })
               <button key={v} type="button" id={`tipo-${v}`} onClick={() => set('type')(v)}
                 className={`flex items-center justify-center gap-2 rounded-xl border-2 px-3 py-2.5 text-sm font-semibold transition ${
                   form.type === v
-                    ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
-                    : 'border-slate-200 text-slate-500 hover:border-slate-300'
+                    ? 'border-hiper-orange bg-hiper-orange-light text-hiper-orange'
+                    : 'border-gray-200 text-gray-500 hover:border-gray-300'
                 }`}>
                 <I className="h-4 w-4" /> {t}
               </button>
             ))}
           </div>
 
-          <Field label="Referencia *" htmlFor="ref" error={errors.ref} className="md:col-span-2">
+          <Field label="Referencia (código) *" htmlFor="ref" error={errors.ref} className="md:col-span-2">
             <input id="ref" className={inputCls} value={form.ref} onChange={set('ref')}
-              placeholder="PROD-2026-001" disabled={isSubmitting} />
+              placeholder="ABA-100" disabled={isSubmitting} />
           </Field>
-          <Field label="Etiqueta *" htmlFor="label" error={errors.label} className="md:col-span-4">
+          <Field label="Nombre *" htmlFor="label" error={errors.label} className="md:col-span-4">
             <input id="label" className={inputCls} value={form.label} onChange={set('label')}
-              placeholder="Taladro Percutor 650W" disabled={isSubmitting} />
+              placeholder="Fideo tallarín 400 g" disabled={isSubmitting} />
+          </Field>
+
+          <Field label={esEdicion ? 'Categoría' : 'Categoría *'} htmlFor="categoria" error={errors.categoria} className="md:col-span-6">
+            <select id="categoria" className={inputCls} value={form.categoria} onChange={set('categoria')} disabled={isSubmitting}>
+              <option value="">{esEdicion ? 'Sin categoría' : 'Elige una categoría'}</option>
+              {categorias.map((c) => (
+                <option key={c.id} value={c.id}>{c.label}</option>
+              ))}
+            </select>
           </Field>
 
           <Field label="Descripción" htmlFor="description" className="md:col-span-6">
             <textarea id="description" rows={3} className={inputCls} value={form.description}
-              onChange={set('description')} placeholder="Taladro percutor con reversa y velocidad variable."
+              onChange={set('description')} placeholder="Descripción breve del producto."
               disabled={isSubmitting} />
           </Field>
 
-          <Field label="Precio de venta" htmlFor="price" error={errors.price} className="md:col-span-2">
+          <Field label="Precio de venta (Bs) *" htmlFor="price" error={errors.price} className="md:col-span-2">
             <input id="price" type="number" step="0.01" min="0" className={inputCls} value={form.price}
-              onChange={set('price')} placeholder="350.00" disabled={isSubmitting} />
+              onChange={set('price')} placeholder="12.50" disabled={isSubmitting} />
           </Field>
           <Field label="Precio mínimo" htmlFor="price_min" error={errors.price_min} className="md:col-span-2">
             <input id="price_min" type="number" step="0.01" min="0" className={inputCls} value={form.price_min}
-              onChange={set('price_min')} placeholder="320.00" disabled={isSubmitting} />
+              onChange={set('price_min')} placeholder="0.00" disabled={isSubmitting} />
           </Field>
           <Field label="Base de precio" htmlFor="price_base_type" className="md:col-span-1">
             <select id="price_base_type" className={inputCls} value={form.price_base_type}
@@ -141,18 +155,19 @@ export const ProductoFormModal = ({ producto, onClose, onSubmit, isSubmitting })
           </Field>
 
           {form.price_base_type === 'HT' && form.price !== '' && (
-            <p className="md:col-span-6 -mt-2 text-xs text-slate-500">
-              Precio con IVA estimado: <b className="text-slate-700">{precioTTC.toFixed(2)}</b>
+            <p className="md:col-span-6 -mt-2 text-xs text-gray-500">
+              Precio con IVA estimado: <b className="text-gray-700">{precioTTC.toFixed(2)}</b>
             </p>
           )}
 
           <Field label="Código de barras" htmlFor="barcode" className="md:col-span-3">
             <input id="barcode" className={inputCls} value={form.barcode} onChange={set('barcode')}
-              placeholder="7751234567890" disabled={isSubmitting} />
+              placeholder="7772000000000" disabled={isSubmitting} />
           </Field>
-          <Field label="Tipo de código" htmlFor="barcode_type" className="md:col-span-3">
+          <Field label="Tipo de código" htmlFor="barcode_type" error={errors.barcode_type} className="md:col-span-3">
             <select id="barcode_type" className={inputCls} value={form.barcode_type}
-              onChange={set('barcode_type')} disabled={isSubmitting}>
+              onChange={set('barcode_type')} disabled={isSubmitting || !form.barcode.trim()}>
+              <option value="">{form.barcode.trim() ? 'Elige el tipo' : 'Sin código de barras'}</option>
               <option value="1">EAN8</option>
               <option value="2">EAN13</option>
               <option value="3">UPC</option>
@@ -186,15 +201,15 @@ export const ProductoFormModal = ({ producto, onClose, onSubmit, isSubmitting })
           </div>
         </div>
 
-        <footer className="flex justify-end gap-2 border-t border-slate-100 bg-slate-50 px-6 py-4">
+        <footer className="flex justify-end gap-2 border-t border-gray-100 bg-gray-50 px-6 py-4">
           <button type="button" id="btn-cancelar" onClick={onClose} disabled={isSubmitting}
-            className="rounded-xl px-4 py-2 text-sm font-semibold text-slate-600 transition hover:bg-slate-200">
+            className="rounded-xl px-4 py-2 text-sm font-semibold text-gray-600 transition hover:bg-gray-200">
             Cancelar
           </button>
           <button type="submit" id="btn-guardar-producto" disabled={isSubmitting}
-            className="inline-flex items-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 px-5 py-2 text-sm font-semibold text-white shadow-lg shadow-indigo-500/30 transition hover:brightness-110 active:scale-[.98] disabled:opacity-60">
+            className="inline-flex items-center gap-2 rounded-xl bg-hiper-orange px-5 py-2 text-sm font-semibold text-white shadow transition hover:bg-hiper-orange-dark active:scale-[.98] disabled:opacity-60">
             {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
-            {isSubmitting ? 'Guardando...' : esEdicion ? 'Guardar cambios' : 'Crear producto'}
+            {isSubmitting ? 'Guardando…' : esEdicion ? 'Guardar cambios' : 'Crear producto'}
           </button>
         </footer>
       </form>

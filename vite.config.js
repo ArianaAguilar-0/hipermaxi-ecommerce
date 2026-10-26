@@ -1,6 +1,5 @@
 import { fileURLToPath } from "node:url";
 import path from "node:path";
-import https from "node:https";
 import { defineConfig, loadEnv } from 'vite'
 import react from '@vitejs/plugin-react'
 import tailwindcss from '@tailwindcss/vite'
@@ -42,8 +41,8 @@ export default defineConfig(({ mode }) => {
               target: dolibarrUrl,
               changeOrigin: true,
               secure: true,
-              // Reutiliza conexiones con Dolibarr (menos conexiones nuevas = menos cortes)
-              agent: new https.Agent({ keepAlive: true, maxSockets: 6 }),
+              // Sin keep-alive: reutilizar conexiones causaba "socket hang up" cuando Dolibarr
+              // cerraba una conexión justo al volver a usarla
               // Si Dolibarr no responde en 30 s, se corta la petición
               proxyTimeout: 30000,
               configure: (proxy) => {

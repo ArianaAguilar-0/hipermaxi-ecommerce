@@ -48,27 +48,47 @@ export const normalizarProducto = (p = {}) => ({
  *   type: "0" | "1",            // 0 = producto, 1 = servicio
  *   status: "0" | "1",          // en venta
  *   status_buy: "0" | "1",      // en compra
- *   barcode, barcode_type: "1",
- *   price, price_min, price_base_type: "HT" | "TTC",
- *   tva_tx, weight, weight_units: "0"
+ *   price, price_base_type: "HT" | "TTC", price_ttc (si la base es TTC), tva_tx,
+ *   price_min, weight, barcode, barcode_type: solo si tienen valor
  * }
  */
-export const toDolibarrPayload = (form) => ({
-  ref: form.ref?.trim(),
-  label: form.label?.trim(),
-  description: form.description ?? '',
-  type: String(form.type ?? '0'),
-  status: form.status ? '1' : '0',
-  status_buy: form.status_buy ? '1' : '0',
-  barcode: form.barcode?.trim() ?? '',
-  barcode_type: String(form.barcode_type ?? '1'),
-  price: toNumber(form.price),
-  price_min: toNumber(form.price_min),
-  price_base_type: form.price_base_type || 'HT',
-  tva_tx: toNumber(form.tva_tx),
-  weight: toNumber(form.weight),
-  weight_units: String(form.weight_units ?? '0'),
-});
+export const toDolibarrPayload = (form, { esEdicion = false, teniaCodigoBarras = false } = {}) => {
+  const base = form.price_base_type === 'TTC' ? 'TTC' : 'HT';
+  const precio = toNumber(form.price);
+  const payload = {
+    ref: form.ref?.trim(),
+    label: form.label?.trim(),
+    description: form.description ?? '',
+    type: Number(form.type ?? 0),
+    status: form.status ? 1 : 0,
+    status_buy: form.status_buy ? 1 : 0,
+    price: precio,
+    price_base_type: base,
+    tva_tx: toNumber(form.tva_tx),
+  };
+  // Al CREAR con base TTC, Dolibarr toma el precio de price_ttc (si solo va "price", guarda 0)
+  if (base === 'TTC') payload.price_ttc = precio;
+
+  // Campos opcionales: solo se envían si tienen valor
+  if (String(form.price_min ?? '').trim() !== '') {
+    payload.price_min = toNumber(form.price_min);
+    if (base === 'TTC') payload.price_min_ttc = payload.price_min;
+  }
+  if (String(form.weight ?? '').trim() !== '') {
+    payload.weight = toNumber(form.weight);
+    payload.weight_units = Number(form.weight_units ?? 0);
+  }
+  const codigo = form.barcode?.trim();
+  if (codigo) {
+    payload.barcode = codigo;
+    if (form.barcode_type) payload.barcode_type = Number(form.barcode_type);
+  } else if (esEdicion && teniaCodigoBarras) {
+    // Al editar, si se borró el código de barras, también se quita su tipo
+    payload.barcode = '';
+    payload.barcode_type = null;
+  }
+  return payload;
+};
 
 /** Valores iniciales del formulario (producto nuevo). */
 export const productoVacio = {
@@ -79,13 +99,14 @@ export const productoVacio = {
   status: true,
   status_buy: true,
   barcode: '',
-  barcode_type: '1',
+  barcode_type: '',
   price: '',
   price_min: '',
-  price_base_type: 'HT',
+  price_base_type: 'TTC', // precio de góndola (con IVA), como el resto del catálogo
   tva_tx: '13',
   weight: '',
   weight_units: '0',
+  categoria: '',
 };
 
 /** Convierte un producto devuelto por Dolibarr al estado del formulario. */
@@ -97,9 +118,13 @@ export const fromDolibarr = (p = {}) => ({
   status: String(p.status) === '1',
   status_buy: String(p.status_buy) === '1',
   barcode: p.barcode ?? '',
-  barcode_type: String(p.barcode_type ?? '1'),
-  price: p.price != null ? toNumber(p.price).toFixed(2) : '',
-  price_min: p.price_min != null ? toNumber(p.price_min).toFixed(2) : '',
+  // Sin código de barras no se muestra ningún tipo
+  barcode_type: p.barcode ? String(p.barcode_type ?? '') : '',
+  // El precio se muestra en la misma base en que está guardado (con o sin IVA)
+  price: (p.price_base_type === 'TTC' ? p.price_ttc : p.price) != null
+    ? toNumber(p.price_base_type === 'TTC' ? p.price_ttc : p.price).toFixed(2) : '',
+  price_min: (p.price_base_type === 'TTC' ? p.price_min_ttc : p.price_min) != null
+    ? toNumber(p.price_base_type === 'TTC' ? p.price_min_ttc : p.price_min).toFixed(2) : '',
   price_base_type: p.price_base_type || 'HT',
   tva_tx: p.tva_tx != null ? String(toNumber(p.tva_tx)) : '13',
   weight: p.weight != null && p.weight !== '' ? String(toNumber(p.weight)) : '',
@@ -108,7 +133,8 @@ export const fromDolibarr = (p = {}) => ({
 
 export const ProductosDolibarrService = {
   /**
-   * Lista productos con paginación y búsqueda por ref/etiqueta.
+   * Panel de administración (todas estas llamadas usan el token del administrador).
+   * Lista productos con paginación y búsqueda por nombre, referencia o código de barras.
    */
   getProductos: async ({ page = 0, limit = 10, search = '', signal } = {}) => {
     const params = {
@@ -121,7 +147,7 @@ export const ProductosDolibarrService = {
     const filtro = filtroBusqueda(search, true);
     if (filtro) params.sqlfilters = filtro;
     try {
-      const { data } = await dolibarrClient.get('/products', { params, signal });
+      const { data } = await dolibarrClient.get('/products', { params, signal, conToken: true });
       return Array.isArray(data) ? data : data?.data ?? [];
     } catch (error) {
       // Dolibarr responde 404 cuando no hay resultados
@@ -180,18 +206,47 @@ export const ProductosDolibarrService = {
   },
 
   getProductoById: async (id, signal) => {
-    const { data } = await dolibarrClient.get(`/products/${id}`, { signal });
+    const { data } = await dolibarrClient.get(`/products/${id}`, { signal, conToken: true, params: { includestockdata: 1 } });
     return data;
   },
 
-  /** Crea un producto. Dolibarr devuelve el ID del nuevo registro. */
+  /** Categorías asignadas a un producto (GET /products/{id}/categories). */
+  getCategoriasDeProducto: async (id) => {
+    try {
+      const { data } = await dolibarrClient.get(`/products/${id}/categories`, { conToken: true });
+      return (Array.isArray(data) ? data : []).map((c) => String(c.id));
+    } catch (error) {
+      if (error?.response?.status === 404) return [];
+      throw error;
+    }
+  },
+
+  /** Crea un producto con el token del admin. Dolibarr devuelve el ID del nuevo registro. */
   createProducto: async (form) => {
-    const { data } = await dolibarrClient.post('/products', toDolibarrPayload(form));
+    const { data } = await dolibarrClient.post('/products', toDolibarrPayload(form), { conToken: true });
     return data;
   },
 
-  updateProducto: async (id, form) => {
-    const { data } = await dolibarrClient.put(`/products/${id}`, toDolibarrPayload(form));
+  /**
+   * Actualiza un producto con el token del admin.
+   * `anterior` es el producto tal como estaba (para saber si hay que borrar el tipo de código de barras).
+   */
+  updateProducto: async (id, form, anterior = {}) => {
+    const payload = toDolibarrPayload(form, {
+      esEdicion: true,
+      teniaCodigoBarras: Boolean(anterior.barcode || anterior.barcode_type),
+    });
+    const { data } = await dolibarrClient.put(`/products/${id}`, payload, { conToken: true });
+    return data;
+  },
+
+  /** Fija el precio de venta (PUT /products/{id} solo con precio, base e IVA). */
+  updatePrecio: async (id, form) => {
+    const { data } = await dolibarrClient.put(`/products/${id}`, {
+      price: toNumber(form.price),
+      price_base_type: form.price_base_type === 'TTC' ? 'TTC' : 'HT',
+      tva_tx: toNumber(form.tva_tx),
+    }, { conToken: true });
     return data;
   },
 };

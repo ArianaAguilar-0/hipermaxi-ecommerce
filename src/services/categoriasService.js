@@ -23,6 +23,19 @@ export const CategoriasService = {
       throw error;
     }
   },
+
+  /** Asigna un producto a una categoría (con el token del admin). */
+  vincularProducto: async (categoriaId, productoId) => {
+    // Cuerpo {} (no null): axios enviaría el texto "null" y Dolibarr responde "Error parsing JSON"
+    const { data } = await dolibarrClient.post(`/categories/${categoriaId}/objects/product/${productoId}`, {}, { conToken: true });
+    return data;
+  },
+
+  /** Quita un producto de una categoría (con el token del admin). */
+  desvincularProducto: async (categoriaId, productoId) => {
+    const { data } = await dolibarrClient.delete(`/categories/${categoriaId}/objects/product/${productoId}`, { conToken: true });
+    return data;
+  },
 };
 
 export default CategoriasService;

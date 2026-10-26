@@ -95,7 +95,7 @@ export const useProcesarCompra = ({ items, actualizarItem }) => {
   };
 
   /**
-   * datos: { cliente: {nombre, nit, email, telefono, direccion},
+   * datos: { socid (si el cliente inició sesión), cliente: {nombre, nit, email, telefono, direccion},
    *          entrega: {tipo: 'tienda'|'domicilio', sucursal, direccion},
    *          pago: 'qr'|'tarjeta' }
    * Devuelve el resumen de la compra o null si falló.
@@ -148,6 +148,10 @@ export const useProcesarCompra = ({ items, actualizarItem }) => {
 
       // 2. Buscar el tercero por correo o crearlo
       paso = 'tercero';
+      if (!p.socid && datos.socid) {
+        // Cliente con sesión: se usa su propio tercero
+        p = avanzar({ socid: Number(datos.socid), terceroNuevo: false }, p);
+      }
       if (!p.socid) {
         setPasoActual(paso);
         const existente = await TercerosService.buscarPorEmail(datos.cliente.email);

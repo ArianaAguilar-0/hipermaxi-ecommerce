@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { Lock, QrCode, CreditCard, LogIn, FlaskConical, AlertTriangle, Loader2 } from 'lucide-react';
+import { Navigate, useNavigate } from 'react-router-dom';
+import { QrCode, CreditCard, AlertTriangle, Loader2, BadgeCheck } from 'lucide-react';
 import toast from 'react-hot-toast';
 import FormularioFacturacion from '@/componentes/checkout/FormularioFacturacion';
 import OpcionesEntrega from '@/componentes/checkout/OpcionesEntrega';
@@ -33,7 +33,9 @@ const tarjetaVacia = { numero: '', nombre: '', vencimiento: '', cvv: '' };
 export const Checkout = () => {
   const navigate = useNavigate();
   const { items, subtotal, vaciar, actualizarItem } = useCart();
-  const { isAutenticated, esTemporal, iniciarSesionPrueba, cliente: clienteSesion } = useAuth();
+  const { isAutenticated, esCliente, user, cliente: clienteSesion } = useAuth();
+  // Un cliente con tercero vinculado compra con los datos de su cuenta
+  const socidCliente = esCliente ? user?.socid : null;
   const { procesar, pasoActual, fallo, progreso, bloqueada, reiniciar } = useProcesarCompra({ items, actualizarItem });
 
   const [cliente, setCliente] = useState(() => ({ ...clienteVacio, ...(clienteSesion || {}) }));
@@ -56,31 +58,16 @@ export const Checkout = () => {
     return <EmptyState message="Tu carrito está vacío." onAction={() => navigate('/tienda')} actionLabel="Ir a la tienda" />;
   }
 
-  // Sin sesión: se pide iniciar sesión (el login con roles llega en la Fase 3)
+  // Sin sesión: se abre el login y luego se vuelve al checkout
   if (!isAutenticated) {
-    return (
-      <div className="mx-auto max-w-md rounded-3xl bg-white p-8 text-center shadow-sm">
-        <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-hiper-navy-light text-hiper-navy">
-          <Lock />
-        </div>
-        <h1 className="mt-4 !text-2xl font-extrabold text-hiper-navy">Inicia sesión para pagar</h1>
-        <p className="mt-2 text-sm text-gray-500">Tu carrito se mantiene mientras inicias sesión.</p>
-        <Link to="/login" state={{ volver: '/checkout' }}
-          className="mt-6 flex items-center justify-center gap-2 rounded-xl bg-hiper-orange py-3 font-bold text-white hover:bg-hiper-orange-dark">
-          <LogIn size={18} /> Iniciar sesión
-        </Link>
-        <button type="button" onClick={iniciarSesionPrueba}
-          className="mt-3 flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-gray-300 py-3 text-sm font-semibold text-gray-600 hover:border-hiper-navy hover:text-hiper-navy">
-          <FlaskConical size={16} /> Continuar con sesión de prueba (temporal)
-        </button>
-      </div>
-    );
+    return <Navigate to="/login" replace state={{ volver: '/checkout' }} />;
   }
 
   const confirmar = async () => {
     if (!bloqueada) {
       const errs = {
-        ...validarCliente(cliente),
+        // Los datos de un cliente registrado vienen de su tercero en Dolibarr
+        ...(socidCliente ? {} : validarCliente(cliente)),
         ...validarEntrega(entrega),
         ...(metodo === 'tarjeta' ? Object.fromEntries(Object.entries(validarTarjeta(tarjeta)).map(([k, v]) => [`tarjeta_${k}`, v])) : {}),
       };
@@ -93,7 +80,7 @@ export const Checkout = () => {
 
     // Copia del resumen antes de vaciar el carrito
     const itemsCompra = items.map((i) => ({ ...i }));
-    const resultado = await procesar({ cliente, entrega, pago: metodo });
+    const resultado = await procesar({ cliente, entrega, pago: metodo, socid: socidCliente });
     if (!resultado) {
       toast.error('No se pudo completar la compra');
       return;
@@ -126,11 +113,7 @@ export const Checkout = () => {
   return (
     <div>
       <h1 className="mb-1 !text-2xl font-extrabold text-hiper-navy md:!text-3xl">Finalizar compra</h1>
-      {esTemporal && (
-        <p className="mb-5 inline-flex items-center gap-1.5 rounded-full bg-amber-50 px-3 py-1 text-xs font-medium text-amber-700">
-          <FlaskConical size={14} /> Sesión de prueba temporal
-        </p>
-      )}
+      <p className="mb-5 text-sm text-gray-500">Comprando como <b className="text-gray-700">{user?.nombre}</b></p>
 
       {/* Falló un paso: explicación y reintento */}
       {fallo && (
@@ -149,7 +132,13 @@ export const Checkout = () => {
       <div className="grid gap-6 lg:grid-cols-[1fr_380px]">
         <div className="space-y-6">
           <Paso numero={1} titulo="Datos de facturación">
-            <FormularioFacturacion valores={cliente} errores={errores} onChange={setCliente} deshabilitado={procesando || bloqueada} />
+            {socidCliente && (
+              <p className="mb-4 flex items-center gap-2 rounded-xl bg-emerald-50 px-3 py-2 text-xs text-emerald-700">
+                <BadgeCheck size={16} /> Datos de tu cuenta de cliente en Dolibarr. Para cambiarlos, contacta a la tienda.
+              </p>
+            )}
+            <FormularioFacturacion valores={cliente} errores={errores} onChange={setCliente}
+              deshabilitado={procesando || bloqueada || Boolean(socidCliente)} />
           </Paso>
 
           <Paso numero={2} titulo="Tipo de entrega">

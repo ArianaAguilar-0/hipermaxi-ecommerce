@@ -1,6 +1,10 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import ProductosDolibarrService from '../services/productosDolibarrService';
+import CategoriasService from '../services/categoriasService';
 import { getErrorMessage } from '../services/dolibarrClient';
+
+// Error de un paso posterior a la creación (el producto ya existe en Dolibarr)
+class ErrorTrasCrear extends Error {}
 
 /**
  * Hook que encapsula el estado y las operaciones CRUD de productos en Dolibarr.
@@ -34,24 +38,71 @@ export const useProductosDolibarr = ({ limit = 10, enabled = true } = {}) => {
   const productos = result.data;
   const error = result.error;
 
+  // Evita el doble envío: isSubmitting recién cambia en el siguiente render,
+  // así que un doble clic alcanzaba a mandar dos POST (el segundo daba "ErrorProductAlreadyExists")
+  const enCurso = useRef(false);
+
   const ejecutar = async (fn) => {
+    if (enCurso.current) return { ok: false, error: 'Ya se está guardando, espera un momento.' };
+    enCurso.current = true;
     setIsSubmitting(true);
     try {
       const res = await fn();
-      recargar();
       return { ok: true, data: res };
     } catch (err) {
-      return { ok: false, error: getErrorMessage(err) };
+      const creado = err instanceof ErrorTrasCrear;
+      return { ok: false, creado, error: creado ? err.message : getErrorMessage(err) };
     } finally {
+      enCurso.current = false;
       setIsSubmitting(false);
+      recargar();
     }
   };
 
-  // CREATE
-  const crearProducto = (form) => ejecutar(() => ProductosDolibarrService.createProducto(form));
-  // UPDATE
-  const actualizarProducto = (id, form) =>
-    ejecutar(() => ProductosDolibarrService.updateProducto(id, form));
+  // Comprueba que Dolibarr guardó el precio; si no, lo fija con un PUT aparte
+  const asegurarPrecio = async (id, form) => {
+    const guardado = await ProductosDolibarrService.getProductoById(id);
+    const campo = form.price_base_type === 'TTC' ? guardado.price_ttc : guardado.price;
+    if (Math.abs(Number(campo) - Number(form.price)) > 0.001) {
+      await ProductosDolibarrService.updatePrecio(id, form);
+    }
+  };
+
+  // Ejecuta los pasos que van después de crear; si uno falla, avisa que el producto YA existe
+  const pasoTrasCrear = async (id, form, nombre, fn) => {
+    try {
+      await fn();
+    } catch (err) {
+      throw new ErrorTrasCrear(
+        `El producto ${form.ref} se creó (ID ${id}), pero falló ${nombre}: ${getErrorMessage(err)}. ` +
+        'No lo vuelvas a crear: edítalo para completarlo.'
+      );
+    }
+  };
+
+  // CREATE: crea el producto, verifica el precio y lo asigna a la categoría elegida
+  const crearProducto = (form) =>
+    ejecutar(async () => {
+      const id = await ProductosDolibarrService.createProducto(form);
+      await pasoTrasCrear(id, form, 'al guardar el precio', () => asegurarPrecio(id, form));
+      if (form.categoria) {
+        await pasoTrasCrear(id, form, 'al asignar la categoría', () =>
+          CategoriasService.vincularProducto(form.categoria, id));
+      }
+      return id;
+    });
+
+  // UPDATE: actualiza el producto, verifica el precio y, si cambió la categoría, la reemplaza
+  const actualizarProducto = (id, form, categoriaAnterior = '', anterior = {}) =>
+    ejecutar(async () => {
+      const res = await ProductosDolibarrService.updateProducto(id, form, anterior);
+      await asegurarPrecio(id, form);
+      if (form.categoria !== categoriaAnterior) {
+        if (categoriaAnterior) await CategoriasService.desvincularProducto(categoriaAnterior, id);
+        if (form.categoria) await CategoriasService.vincularProducto(form.categoria, id);
+      }
+      return res;
+    });
 
   const buscar = (texto) => {
     setPage(0);
