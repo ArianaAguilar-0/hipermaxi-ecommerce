@@ -6,8 +6,8 @@ import { getErrorMessage } from '@/services/dolibarrClient';
 import ErrorMessage from '@/shimer/pulse/ErrorMessage';
 import EmptyState from '@/shimer/pulse/EmptyState';
 
-// Horario de ejemplo (no es un dato oficial)
-const HORARIO_EJEMPLO = 'Lunes a domingo, 8:00 a 21:00 (horario de ejemplo)';
+// Horario de atención de las sucursales
+const HORARIO_EJEMPLO = 'Lunes a domingo, 8:00 a 21:00';
 
 // Sucursales: las mismas que el checkout ofrece para "Recoger en tienda" (almacenes de Dolibarr)
 export const Sucursales = () => {
