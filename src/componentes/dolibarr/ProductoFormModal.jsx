@@ -39,6 +39,11 @@ const validar = (f, esEdicion) => {
     e.price_min = 'No puede ser mayor que el precio de venta';
   if (f.weight !== '' && (isNaN(parseFloat(f.weight)) || parseFloat(f.weight) < 0)) e.weight = 'Peso inválido';
   if (f.barcode.trim() && !f.barcode_type) e.barcode_type = 'Elige el tipo de código de barras';
+  // Stock inicial (solo al crear un Producto): entero, 0 o más
+  if (!esEdicion && f.type === '0' && String(f.stock_inicial ?? '').trim() !== '') {
+    if (!/^\d+$/.test(String(f.stock_inicial).trim())) e.stock_inicial = 'Debe ser un número entero, 0 o más';
+    else if (Number(f.stock_inicial) > 0 && !f.almacen) e.almacen = 'Elige el almacén';
+  }
   return e;
 };
 
@@ -46,10 +51,16 @@ const validar = (f, esEdicion) => {
  * Montar solo cuando esté abierto y con `key` distinta por producto,
  * así el estado inicial se toma directamente de las props.
  */
-export const ProductoFormModal = ({ producto, categorias = [], categoriaInicial = '', onClose, onSubmit, isSubmitting }) => {
+export const ProductoFormModal = ({
+  producto, categorias = [], categoriaInicial = '', almacenes = [], almacenPorDefecto = '',
+  onClose, onSubmit, isSubmitting,
+}) => {
   const [form, setForm] = useState(() => ({
     ...(producto ? fromDolibarr(producto) : productoVacio),
     categoria: categoriaInicial,
+    // Stock inicial opcional (solo al crear)
+    stock_inicial: '',
+    almacen: almacenPorDefecto,
   }));
   const [errors, setErrors] = useState({});
   const esEdicion = Boolean(producto);
@@ -127,6 +138,24 @@ export const ProductoFormModal = ({ producto, categorias = [], categoriaInicial 
               ))}
             </select>
           </Field>
+
+          {/* Stock inicial: solo al crear y solo para productos (no servicios) */}
+          {!esEdicion && form.type === '0' && (
+            <>
+              <Field label="Stock inicial (opcional)" htmlFor="stock_inicial" error={errors.stock_inicial} className="md:col-span-2">
+                <input id="stock_inicial" type="number" min="0" step="1" inputMode="numeric" className={inputCls}
+                  value={form.stock_inicial} onChange={set('stock_inicial')} placeholder="0" disabled={isSubmitting} />
+              </Field>
+              <Field label="Almacén" htmlFor="almacen" error={errors.almacen} className="md:col-span-4">
+                <select id="almacen" className={inputCls} value={form.almacen} onChange={set('almacen')} disabled={isSubmitting}>
+                  <option value="">Elige un almacén</option>
+                  {almacenes.map((a) => (
+                    <option key={a.id} value={a.id}>{a.ref} · {a.nombre}</option>
+                  ))}
+                </select>
+              </Field>
+            </>
+          )}
 
           <Field label="Descripción" htmlFor="description" className="md:col-span-6">
             <textarea id="description" rows={3} className={inputCls} value={form.description}

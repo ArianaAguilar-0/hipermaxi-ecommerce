@@ -1,13 +1,16 @@
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import {
-  Plus, Search, Pencil, Trash2, RefreshCw, ChevronLeft, ChevronRight, Wrench, Barcode, Loader2, ShieldCheck,
+  Plus, Search, Pencil, Trash2, Boxes, RefreshCw, ChevronLeft, ChevronRight, Wrench, Barcode, Loader2, ShieldCheck,
 } from 'lucide-react';
 import useProductosDolibarr from '../hooks/useProductosDolibarr';
 import useCategorias from '../hooks/useCategorias';
 import ProductoFormModal from '../componentes/dolibarr/ProductoFormModal';
 import ConfirmarEliminarProducto from '../componentes/admin/ConfirmarEliminarProducto';
 import ImagenProducto from '../componentes/tienda/ImagenProducto';
+import AjustarStockDialog from '../componentes/admin/AjustarStockDialog';
+import AlmacenesService from '../services/almacenesService';
+import { CONFIG_TIENDA } from '../lib/configTienda';
 import ProductosDolibarrService from '../services/productosDolibarrService';
 import { getErrorMessage } from '../services/dolibarrClient';
 import ErrorMessage from '../shimer/pulse/ErrorMessage';
@@ -23,7 +26,7 @@ const Insignia = ({ activa, children }) => (
   </span>
 );
 
-// Panel de administrador: consultar, crear, editar y eliminar productos.
+// Panel de administrador: consultar, crear, editar, ajustar stock y eliminar productos.
 // Todas las operaciones usan el token del administrador, no la key de servicio.
 export const AdminProductos = () => {
   const { user, esAdmin } = useAuth();
@@ -32,13 +35,17 @@ export const AdminProductos = () => {
   const [editando, setEditando] = useState(null); // { producto, categoria }
   const [abriendo, setAbriendo] = useState(null);
   const [texto, setTexto] = useState('');
+  // Almacenes de Dolibarr (para el stock inicial y los ajustes); por defecto ALM-CENTRAL
+  const [almacenes, setAlmacenes] = useState([]);
+  const [aAjustar, setAAjustar] = useState(null);
+  const almacenPorDefecto = String(CONFIG_TIENDA.ALMACEN_ID);
   // Producto a eliminar y error de Dolibarr al intentarlo
   const [aEliminar, setAEliminar] = useState(null);
   const [errorEliminar, setErrorEliminar] = useState('');
 
   const {
     productos, page, setPage, buscar, loading, isSubmitting, error, recargar,
-    crearProducto, actualizarProducto, eliminarProducto, hasNextPage,
+    crearProducto, actualizarProducto, eliminarProducto, ajustarStock, hasNextPage,
   } = useProductosDolibarr({ limit: LIMIT });
 
   // Búsqueda con debounce (nombre, referencia o código de barras)
@@ -47,6 +54,26 @@ export const AdminProductos = () => {
     return () => clearTimeout(t);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [texto]);
+
+  useEffect(() => {
+    const controller = new AbortController();
+    AlmacenesService.getSucursales(controller.signal)
+      .then(setAlmacenes)
+      .catch((err) => !controller.signal.aborted && toast.error(`No se pudieron cargar los almacenes: ${getErrorMessage(err)}`));
+    return () => controller.abort();
+  }, []);
+
+  // Registra el ajuste; devuelve el mensaje de error (o null) para mostrarlo en el diálogo
+  const guardarAjuste = async (ajuste) => {
+    const res = await ajustarStock(aAjustar.id, ajuste);
+    if (res.ok) {
+      toast.success(`Stock actualizado: ${ajuste.tipo === 'salida' ? '-' : '+'}${ajuste.cantidad} (${ajuste.motivo.trim()})`);
+      setAAjustar(null);
+      return null;
+    }
+    toast.error('No se pudo registrar el movimiento');
+    return res.error;
+  };
 
   const abrirNuevo = () => { setEditando(null); setFormOpen(true); };
 
@@ -197,6 +224,12 @@ export const AdminProductos = () => {
                           className="rounded-lg p-2 text-hiper-navy transition hover:bg-hiper-navy-light disabled:opacity-50">
                           {abriendo === p.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Pencil className="h-4 w-4" />}
                         </button>
+                        {!servicio && (
+                          <button id={`btn-stock-${p.id}`} onClick={() => setAAjustar(p)} title="Ajustar stock"
+                            className="rounded-lg p-2 text-hiper-orange transition hover:bg-hiper-orange-light">
+                            <Boxes className="h-4 w-4" />
+                          </button>
+                        )}
                         {esAdmin && (
                           <button id={`btn-eliminar-${p.id}`} onClick={() => abrirEliminar(p)} title="Eliminar"
                             className="rounded-lg p-2 text-red-600 transition hover:bg-red-50">
@@ -240,9 +273,23 @@ export const AdminProductos = () => {
           producto={editando?.producto ?? null}
           categoriaInicial={editando?.categoria ?? ''}
           categorias={categorias}
+          almacenes={almacenes}
+          almacenPorDefecto={almacenPorDefecto}
           isSubmitting={isSubmitting}
           onClose={() => setFormOpen(false)}
           onSubmit={handleSubmit}
+        />
+      )}
+
+      {aAjustar && (
+        <AjustarStockDialog
+          key={aAjustar.id}
+          producto={aAjustar}
+          almacenes={almacenes}
+          almacenPorDefecto={almacenPorDefecto}
+          guardando={isSubmitting}
+          onGuardar={guardarAjuste}
+          onCerrar={() => setAAjustar(null)}
         />
       )}
 

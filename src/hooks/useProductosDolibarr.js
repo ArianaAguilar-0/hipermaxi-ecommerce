@@ -1,10 +1,19 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 import ProductosDolibarrService from '../services/productosDolibarrService';
 import CategoriasService from '../services/categoriasService';
+import MovimientosStockService from '../services/movimientosStockService';
 import { getErrorMessage } from '../services/dolibarrClient';
 
 // Error de un paso posterior a la creación (el producto ya existe en Dolibarr)
 class ErrorTrasCrear extends Error {}
+// Error al registrar un movimiento de stock (con mensaje ya preparado)
+class ErrorStock extends Error {}
+
+// Mensaje claro para errores de movimientos de stock (403 = falta el permiso)
+const mensajeStock = (err) =>
+  err?.response?.status === 403
+    ? 'Falta el permiso "Stock → Crear/modificar movimientos de stock" en Dolibarr'
+    : getErrorMessage(err);
 
 /**
  * Hook que encapsula el estado y las operaciones CRUD de productos en Dolibarr.
@@ -51,7 +60,8 @@ export const useProductosDolibarr = ({ limit = 10, enabled = true } = {}) => {
       return { ok: true, data: res };
     } catch (err) {
       const creado = err instanceof ErrorTrasCrear;
-      return { ok: false, creado, status: err?.response?.status, error: creado ? err.message : getErrorMessage(err) };
+      const conMensaje = creado || err instanceof ErrorStock;
+      return { ok: false, creado, status: err?.response?.status, error: conMensaje ? err.message : getErrorMessage(err) };
     } finally {
       enCurso.current = false;
       setIsSubmitting(false);
@@ -80,7 +90,7 @@ export const useProductosDolibarr = ({ limit = 10, enabled = true } = {}) => {
     }
   };
 
-  // CREATE: crea el producto, verifica el precio y lo asigna a la categoría elegida
+  // CREATE: crea el producto, verifica el precio, lo asigna a la categoría y registra el stock inicial
   const crearProducto = (form) =>
     ejecutar(async () => {
       const id = await ProductosDolibarrService.createProducto(form);
@@ -89,7 +99,36 @@ export const useProductosDolibarr = ({ limit = 10, enabled = true } = {}) => {
         await pasoTrasCrear(id, form, 'al asignar la categoría', () =>
           CategoriasService.vincularProducto(form.categoria, id));
       }
+      // Stock inicial: solo productos (no servicios) y si es mayor que 0
+      const stockInicial = Number(form.stock_inicial || 0);
+      if (String(form.type) === '0' && stockInicial > 0) {
+        try {
+          await MovimientosStockService.registrar({
+            productoId: id, almacenId: form.almacen, cantidad: stockInicial, etiqueta: 'Stock inicial',
+          });
+        } catch (err) {
+          throw new ErrorTrasCrear(
+            'El producto se creó, pero no se pudo registrar el stock inicial. Ajústalo desde Ajustar stock. ' +
+            `(${mensajeStock(err)})`
+          );
+        }
+      }
       return id;
+    });
+
+  // AJUSTE DE STOCK: entrada (suma) o salida (resta) en un almacén, con el motivo como etiqueta
+  const ajustarStock = (id, { almacenId, tipo, cantidad, motivo }) =>
+    ejecutar(async () => {
+      try {
+        return await MovimientosStockService.registrar({
+          productoId: id,
+          almacenId,
+          cantidad: tipo === 'salida' ? -Number(cantidad) : Number(cantidad),
+          etiqueta: motivo.trim(),
+        });
+      } catch (err) {
+        throw new ErrorStock(mensajeStock(err));
+      }
     });
 
   // UPDATE: actualiza el producto, verifica el precio y, si cambió la categoría, la reemplaza
@@ -125,6 +164,7 @@ export const useProductosDolibarr = ({ limit = 10, enabled = true } = {}) => {
     crearProducto,
     actualizarProducto,
     eliminarProducto,
+    ajustarStock,
     hasNextPage: !loading && productos.length === limit,
   };
 };
