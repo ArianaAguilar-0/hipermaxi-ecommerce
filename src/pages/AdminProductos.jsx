@@ -42,10 +42,12 @@ export const AdminProductos = () => {
   // Producto a eliminar y error de Dolibarr al intentarlo
   const [aEliminar, setAEliminar] = useState(null);
   const [errorEliminar, setErrorEliminar] = useState('');
+  // true si Dolibarr rechazó la eliminación por historial: se ofrece desactivar el producto
+  const [puedeDesactivar, setPuedeDesactivar] = useState(false);
 
   const {
     productos, page, setPage, buscar, loading, isSubmitting, error, recargar,
-    crearProducto, actualizarProducto, eliminarProducto, ajustarStock, hasNextPage,
+    crearProducto, actualizarProducto, eliminarProducto, desactivarProducto, ajustarStock, hasNextPage,
   } = useProductosDolibarr({ limit: LIMIT });
 
   // Búsqueda con debounce (nombre, referencia o código de barras)
@@ -109,7 +111,7 @@ export const AdminProductos = () => {
     }
   };
 
-  const abrirEliminar = (p) => { setErrorEliminar(''); setAEliminar(p); };
+  const abrirEliminar = (p) => { setErrorEliminar(''); setPuedeDesactivar(false); setAEliminar(p); };
 
   const confirmarEliminar = async () => {
     const res = await eliminarProducto(aEliminar.id);
@@ -119,10 +121,32 @@ export const AdminProductos = () => {
       return;
     }
     // Si Dolibarr lo rechaza, el producto sigue en la lista y se explica el motivo
+    if (res.status === 401 || res.status === 403) {
+      setErrorEliminar('No tienes permiso para eliminar productos en Dolibarr (Productos → Eliminar productos).');
+      return;
+    }
+    if (!res.status || res.status >= 502) {
+      // Falla de conexión: no es un rechazo de Dolibarr, se puede reintentar
+      setErrorEliminar(res.error);
+      return;
+    }
+    // Rechazo de Dolibarr (por ejemplo, el producto tiene pedidos, facturas o movimientos de stock)
+    setErrorEliminar(`Dolibarr no permitió eliminarlo: ${res.error}`);
+    setPuedeDesactivar(true);
+  };
+
+  // Alternativa: No en venta y No en compra (con el token del admin)
+  const confirmarDesactivar = async () => {
+    const res = await desactivarProducto(aEliminar.id);
+    if (res.ok) {
+      toast.success('Producto desactivado: ya no aparece en la tienda');
+      setAEliminar(null);
+      return;
+    }
     setErrorEliminar(
       res.status === 403
-        ? 'No tienes permiso para eliminar productos en Dolibarr (Productos → Eliminar productos).'
-        : `Dolibarr no permitió eliminarlo: ${res.error}. Si el producto ya tiene pedidos, facturas o movimientos de stock, no se puede borrar; puedes dejarlo "fuera de venta" editándolo.`
+        ? 'No tienes permiso para modificar productos en Dolibarr (Productos → Crear/modificar productos).'
+        : `No se pudo desactivar: ${res.error}`
     );
   };
 
@@ -299,7 +323,9 @@ export const AdminProductos = () => {
           producto={aEliminar}
           eliminando={isSubmitting}
           error={errorEliminar}
+          puedeDesactivar={puedeDesactivar}
           onConfirmar={confirmarEliminar}
+          onDesactivar={confirmarDesactivar}
           onCerrar={() => setAEliminar(null)}
         />
       )}

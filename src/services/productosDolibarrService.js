@@ -249,6 +249,15 @@ export const ProductosDolibarrService = {
     return data;
   },
 
+  /**
+   * Desactiva un producto: No en venta y No en compra (PUT /products/{id}) con el token del admin.
+   * Se usa cuando Dolibarr no permite eliminarlo porque tiene historial; el historial se conserva.
+   */
+  desactivarProducto: async (id) => {
+    const { data } = await dolibarrClient.put(`/products/${id}`, { status: 0, status_buy: 0 }, { conToken: true });
+    return data;
+  },
+
   /** Fija el precio de venta (PUT /products/{id} solo con precio, base e IVA). */
   updatePrecio: async (id, form) => {
     const { data } = await dolibarrClient.put(`/products/${id}`, {

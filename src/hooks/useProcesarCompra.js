@@ -114,7 +114,11 @@ export const useProcesarCompra = ({ items, actualizarItem }) => {
         lineas = [];
         for (const item of items) {
           const actual = await ProductosDolibarrService.getProductoDetalle(item.id);
-          if (!actual.enVenta || actual.stock < item.cantidad) {
+          // Producto desactivado (No en venta) después de agregarlo al carrito
+          if (!actual.enVenta) {
+            throw new ErrorCompra(`${item.label} ya no está a la venta. Quítalo del carrito para continuar.`);
+          }
+          if (actual.stock < item.cantidad) {
             actualizarItem(item.id, { precio: actual.precio, stock: actual.stock });
             throw new ErrorCompra(
               actual.stock <= 0

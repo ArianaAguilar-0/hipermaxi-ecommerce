@@ -146,6 +146,9 @@ export const useProductosDolibarr = ({ limit = 10, enabled = true } = {}) => {
   // DELETE: si Dolibarr lo rechaza, el producto sigue en la lista (se recarga desde Dolibarr)
   const eliminarProducto = (id) => ejecutar(() => ProductosDolibarrService.deleteProducto(id));
 
+  // DESACTIVAR: No en venta y No en compra (deja de verse en la tienda y conserva su historial)
+  const desactivarProducto = (id) => ejecutar(() => ProductosDolibarrService.desactivarProducto(id));
+
   const buscar = (texto) => {
     setPage(0);
     setSearch(texto);
@@ -164,6 +167,7 @@ export const useProductosDolibarr = ({ limit = 10, enabled = true } = {}) => {
     crearProducto,
     actualizarProducto,
     eliminarProducto,
+    desactivarProducto,
     ajustarStock,
     hasNextPage: !loading && productos.length === limit,
   };
