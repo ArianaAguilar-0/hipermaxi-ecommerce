@@ -1,12 +1,13 @@
 import { useEffect, useState } from 'react';
 import toast from 'react-hot-toast';
 import {
-  Plus, Search, Pencil, Trash2, RefreshCw, ChevronLeft, ChevronRight, Package, Wrench, Barcode, Loader2, ShieldCheck,
+  Plus, Search, Pencil, Trash2, RefreshCw, ChevronLeft, ChevronRight, Wrench, Barcode, Loader2, ShieldCheck,
 } from 'lucide-react';
 import useProductosDolibarr from '../hooks/useProductosDolibarr';
 import useCategorias from '../hooks/useCategorias';
 import ProductoFormModal from '../componentes/dolibarr/ProductoFormModal';
 import ConfirmarEliminarProducto from '../componentes/admin/ConfirmarEliminarProducto';
+import ImagenProducto from '../componentes/tienda/ImagenProducto';
 import ProductosDolibarrService from '../services/productosDolibarrService';
 import { getErrorMessage } from '../services/dolibarrClient';
 import ErrorMessage from '../shimer/pulse/ErrorMessage';
@@ -161,10 +162,13 @@ export const AdminProductos = () => {
                   <tr key={p.id} className="transition hover:bg-hiper-orange-light/40">
                     <td className="px-5 py-4">
                       <div className="flex items-center gap-3">
-                        <div className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${
-                          servicio ? 'bg-amber-100 text-amber-600' : 'bg-hiper-navy-light text-hiper-navy'}`}>
-                          {servicio ? <Wrench className="h-5 w-5" /> : <Package className="h-5 w-5" />}
-                        </div>
+                        {servicio ? (
+                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-amber-100 text-amber-600">
+                            <Wrench className="h-5 w-5" />
+                          </div>
+                        ) : (
+                          <div className="w-10 shrink-0"><ImagenProducto producto={p} className="rounded-lg" /></div>
+                        )}
                         <div className="min-w-0">
                           <p className="truncate font-semibold text-gray-800">{p.label}</p>
                           <p className="text-xs text-gray-400">{p.ref} · #{p.id}</p>

@@ -80,7 +80,7 @@ const ProductDetail = () => {
       </Link>
 
       <div className="grid gap-8 rounded-3xl bg-white p-5 shadow-sm md:grid-cols-2 md:p-8">
-        <ImagenProducto producto={producto} tamano="lg" className="rounded-2xl" />
+        <ImagenProducto producto={producto} className="rounded-2xl" />
 
         <div className="flex flex-col">
           <h1 className="!text-2xl font-extrabold text-hiper-navy md:!text-3xl">{producto.label}</h1>

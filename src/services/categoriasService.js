@@ -24,6 +24,19 @@ export const CategoriasService = {
     }
   },
 
+  /** Ids de los productos de una categoría (GET /categories/{id}/objects?type=product&onlyids=1). */
+  getIdsProductos: async (categoriaId) => {
+    try {
+      const { data } = await dolibarrClient.get(`/categories/${categoriaId}/objects`, {
+        params: { type: 'product', onlyids: 1 },
+      });
+      return (Array.isArray(data) ? data : []).map(String);
+    } catch (error) {
+      if (error?.response?.status === 404) return [];
+      throw error;
+    }
+  },
+
   /** Asigna un producto a una categoría (con el token del admin). */
   vincularProducto: async (categoriaId, productoId) => {
     // Cuerpo {} (no null): axios enviaría el texto "null" y Dolibarr responde "Error parsing JSON"

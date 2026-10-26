@@ -1,32 +1,28 @@
-import { ShoppingBasket } from 'lucide-react';
+import { useState } from 'react';
+import useImagenProducto from '@/hooks/useImagenProducto';
+import { IMAGEN_GENERICA } from '@/lib/imagenesCategorias';
 
-// Tonos suaves para los placeholders (los productos de Dolibarr no tienen foto)
-const TONOS = [
-  'bg-hiper-orange-light text-hiper-orange',
-  'bg-hiper-navy-light text-hiper-navy',
-  'bg-emerald-50 text-emerald-600',
-  'bg-amber-50 text-amber-600',
-  'bg-sky-50 text-sky-600',
-  'bg-rose-50 text-rose-500',
-];
-
-// Imagen cuadrada de producto: placeholder con ícono e iniciales
-export const ImagenProducto = ({ producto, className = '', tamano = 'md' }) => {
-  const tono = TONOS[Number(producto?.id || 0) % TONOS.length];
-  const iniciales = (producto?.label || '?')
-    .split(/\s+/)
-    .slice(0, 2)
-    .map((p) => p[0])
-    .join('')
-    .toUpperCase();
-  const grande = tamano === 'lg';
+// Imagen cuadrada de producto: foto de Dolibarr (carga diferida) o ilustración de su categoría
+export const ImagenProducto = ({ producto, className = '' }) => {
+  const { ref, src, esFoto, cargando } = useImagenProducto(producto?.id);
+  // Si la imagen no se puede mostrar (archivo dañado), se usa la ilustración genérica
+  const [fallida, setFallida] = useState(null);
+  const usarGenerica = fallida !== null && fallida === src;
 
   return (
-    <div className={`flex aspect-square w-full flex-col items-center justify-center rounded-xl ${tono} ${className}`}>
-      <ShoppingBasket className={grande ? 'h-20 w-20' : 'h-10 w-10'} strokeWidth={1.5} />
-      <span className={`mt-2 font-bold tracking-wider opacity-70 ${grande ? 'text-2xl' : 'text-sm'}`}>
-        {iniciales}
-      </span>
+    <div ref={ref} className={`relative aspect-square w-full overflow-hidden rounded-xl bg-hiper-orange-light ${className}`}>
+      {cargando ? (
+        <div className="absolute inset-0 animate-pulse bg-hiper-orange-light" aria-hidden="true" />
+      ) : (
+        <img
+          src={usarGenerica ? IMAGEN_GENERICA : src}
+          alt={producto?.label || 'Producto'}
+          loading="lazy"
+          decoding="async"
+          onError={() => setFallida(src)}
+          className={`h-full w-full ${esFoto && !usarGenerica ? 'object-cover' : 'object-contain'}`}
+        />
+      )}
     </div>
   );
 };

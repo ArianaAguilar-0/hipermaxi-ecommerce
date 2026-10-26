@@ -6,7 +6,7 @@ import { getErrorMessage } from '../services/dolibarrClient';
 // entre el Header y el Inicio (se guarda la promesa en memoria).
 let peticion = null;
 
-const cargarCategorias = () => {
+export const cargarCategorias = () => {
   if (!peticion) {
     peticion = CategoriasService.getCategoriasProducto().catch((err) => {
       peticion = null; // si falla, el próximo intento vuelve a pedirlas
