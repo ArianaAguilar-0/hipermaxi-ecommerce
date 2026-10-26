@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { CheckCircle2, FileDown, Loader2 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -15,7 +15,8 @@ const descargarBase64 = (base64, nombre) => {
   a.href = url;
   a.download = nombre;
   a.click();
-  URL.revokeObjectURL(url);
+  // Se libera después, para no cortar la descarga en algunos navegadores
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
 };
 
 // Confirmación de compra: número de pedido, factura, resumen y entrega
@@ -24,19 +25,32 @@ export const CompraExitosa = () => {
   const navigate = useNavigate();
   const compra = state?.compra;
   const [descargando, setDescargando] = useState(false);
+  const enCurso = useRef(false); // evita el doble clic
 
   if (!compra) {
     return <EmptyState message="No hay una compra reciente para mostrar." onAction={() => navigate('/')} actionLabel="Volver al inicio" />;
   }
 
+  // Descarga el PDF; si todavía no existe en Dolibarr, lo genera y vuelve a descargarlo.
+  // El botón está siempre visible (con cualquier tipo de entrega): si falla, se puede volver a presionar.
   const descargarPdf = async () => {
+    if (enCurso.current) return;
+    enCurso.current = true;
     setDescargando(true);
     try {
-      const archivo = await FacturasService.descargarPdf(compra.facturaRef);
+      let archivo;
+      try {
+        archivo = await FacturasService.descargarPdf(compra.facturaRef);
+      } catch (err) {
+        if (err?.response?.status !== 404) throw err;
+        await FacturasService.generarPdf(compra.facturaRef);
+        archivo = await FacturasService.descargarPdf(compra.facturaRef);
+      }
       descargarBase64(archivo.content, archivo.filename || `${compra.facturaRef}.pdf`);
     } catch (err) {
-      toast.error(getErrorMessage(err));
+      toast.error(`No se pudo descargar la factura: ${getErrorMessage(err)}. Intenta de nuevo.`);
     } finally {
+      enCurso.current = false;
       setDescargando(false);
     }
   };
@@ -78,12 +92,11 @@ export const CompraExitosa = () => {
         </div>
 
         <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-          {compra.pdfOk && (
-            <button type="button" onClick={descargarPdf} disabled={descargando}
-              className="flex flex-1 items-center justify-center gap-2 rounded-xl border-2 border-hiper-navy py-3 text-sm font-bold text-hiper-navy hover:bg-hiper-navy-light disabled:opacity-60">
-              {descargando ? <Loader2 size={18} className="animate-spin" /> : <FileDown size={18} />} Descargar factura (PDF)
-            </button>
-          )}
+          {/* Siempre visible: si el PDF no se generó al comprar, se genera al descargarlo */}
+          <button type="button" onClick={descargarPdf} disabled={descargando}
+            className="flex flex-1 items-center justify-center gap-2 rounded-xl border-2 border-hiper-navy py-3 text-sm font-bold text-hiper-navy hover:bg-hiper-navy-light disabled:opacity-60">
+            {descargando ? <Loader2 size={18} className="animate-spin" /> : <FileDown size={18} />} Descargar factura (PDF)
+          </button>
           <Link to="/tienda" className="flex-1 rounded-xl bg-hiper-orange py-3 text-sm font-bold text-white hover:bg-hiper-orange-dark">
             Seguir comprando
           </Link>
