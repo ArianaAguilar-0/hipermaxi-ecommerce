@@ -63,12 +63,54 @@ El navegador nunca ve la key. La app llama a `/api/index.php/...` y el **proxy d
 `DOLAPIKEY` con la key de `.env.local`. Si un usuario inició sesión, se envía su propio
 token y el proxy no lo reemplaza.
 
-Por eso la conexión **solo funciona con `npm run dev`**: si abres el `dist/` compilado
-sin un servidor que haga de proxy, las llamadas a `/api` fallarán.
+Por eso, en local, la conexión **solo funciona con `npm run dev`**: si abres el `dist/`
+compilado sin un servidor que haga de proxy, las llamadas a `/api` fallarán. En Vercel ese
+trabajo lo hace la función `api/dolibarr.js` (ver la sección siguiente).
+
+## Publicación en Vercel
+
+La versión publicada sale de la rama **`publicacion`**. La rama `main` y `npm run dev` siguen
+funcionando igual en local.
+
+En producción no existe el proxy de Vite: lo reemplaza la función de servidor
+[`api/dolibarr.js`](api/dolibarr.js). `vercel.json` envía `/api/*` a esa función y el resto de
+las rutas a `index.html` (así funcionan las rutas de React al recargar la página). La función:
+
+- reenvía a Dolibarr solo los endpoints que usa la app (lista blanca); cualquier otro responde **403**;
+- agrega la key de servicio solo si la petición no trae el token del usuario;
+- rechaza `DELETE` y las escrituras de productos, categorías de productos y stock si no traen el token
+  del administrador (la key de servicio nunca las hace);
+- limita a 120 peticiones por minuto por IP, espera como máximo 25 s a Dolibarr y no reintenta POST/PUT.
+
+### Pasos para publicar
+
+1. Sube la rama: `git push origin publicacion`.
+2. Entra a https://vercel.com con tu cuenta de GitHub → **Add New… → Project** → importa el repositorio.
+3. Framework: **Vite** (Vercel lo detecta). Comando de build: `npm run build`. Carpeta de salida: `dist`.
+4. En **Environment Variables** agrega (para *Production*):
+   - `DOLIBARR_URL` = la URL base de Dolibarr, **sin** `/api/index.php` (la misma de `.env.local`).
+   - `DOLIBARR_API_KEY` = la key del usuario de servicio.
+   No uses el prefijo `VITE_`: así la key nunca llega al navegador.
+5. Presiona **Deploy**.
+6. En **Settings → Git → Production Branch** escribe `publicacion` y guarda. Desde ahí, cada
+   `git push origin publicacion` vuelve a publicar la tienda.
+
+Si cambias una variable de entorno, vuelve a publicar (**Deployments → … → Redeploy**) para que se aplique.
+
+### Cómo desactivar la publicación
+
+- **Pausar:** en el proyecto de Vercel → **Settings → General → Pause Project** (la URL deja de
+  responder hasta que lo reanudes).
+- **Cortar el acceso a Dolibarr:** borra la variable `DOLIBARR_API_KEY` en Vercel y vuelve a publicar;
+  la tienda carga, pero sin datos.
+- **Eliminar:** **Settings → General → Delete Project**. Si la key estuvo publicada, genera una nueva
+  en Dolibarr para el usuario de servicio.
 
 ## Estructura de carpetas
 
 ```
+api/
+└── dolibarr.js       Función de Vercel que reemplaza al proxy de Vite en producción
 src/
 ├── pages/            Páginas (Inicio, detalle de producto, admin, NotFound…)
 ├── layouts/          Header, Footer y layout de la tienda
