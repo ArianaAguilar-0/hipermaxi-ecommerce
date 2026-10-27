@@ -18,6 +18,11 @@ export default defineConfig([
       parserOptions: { ecmaFeatures: { jsx: true } },
     },
   },
+  // Función serverless de Vercel (se ejecuta en Node, no en el navegador)
+  {
+    files: ['api/**/*.js'],
+    languageOptions: { globals: globals.node },
+  },
   // Componentes generados por shadcn: exportan variantes junto a los componentes
   {
     files: ['src/components/ui/**/*.{js,jsx}'],

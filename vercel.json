@@ -1,0 +1,13 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "vite",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
+  "functions": {
+    "api/dolibarr.js": { "maxDuration": 30 }
+  },
+  "rewrites": [
+    { "source": "/api/:ruta*", "destination": "/api/dolibarr?ruta=:ruta*" },
+    { "source": "/((?!api/).*)", "destination": "/index.html" }
+  ]
+}
